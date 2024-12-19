@@ -23,8 +23,9 @@ df = pl.DataFrame({
         (4, 'm'),
         (5, 'm'),
     ], dtype=quantity),
+    'c': [1,2,3, 4, 5]
 })
 
 
-result = df.with_columns(sum = unit_sum("a"))
+result = df.with_columns(sum = unit_sum("a"), sum2 = unit_sum("c"))
 print(result)

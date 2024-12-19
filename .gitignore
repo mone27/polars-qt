@@ -7,3 +7,7 @@ venv
 *.dll
 *.pyd
 
+
+# pixi environments
+.pixi
+*.egg-info

@@ -17,3 +17,27 @@ module-name = "polars_unit._internal"
 [[tool.mypy.overrides]]
 module = "polars.utils.udfs"
 ignore_missing_imports = true
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.dependencies]
+python = ">=3.12"
+polars = "*"
+maturin = "*"
+ruff = "*"
+pytest = "*"
+mypy = "*"
+rust = "*"
+uv = ">=0.5.10,<0.6"
+ipykernel = "*"
+
+[tool.pixi.pypi-options]
+no-build-isolation = ["polars-unit"]
+
+
+[tool.pixi.pypi-dependencies]
+# polars-unit = { path = ".", editable = true}
+
+[tool.pixi.tasks]

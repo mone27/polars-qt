@@ -39,14 +39,6 @@ use std::fmt::Write;
 
 
 
-// Example from tutorial
-
-struct Point2D {
-    x: f64,
-    y: f64,
-    rgb: u32,
-}
-
 fn struct_point_2d_output(input_fields: &[Field]) -> PolarsResult<Field> {
     let field = &input_fields[0];
     match field.dtype() {
