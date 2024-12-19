@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 LIB = Path(__file__).parent
 
 
-def unit_sum(expr: IntoExprColumn) -> pl.Expr:
+def noop(expr: IntoExprColumn) -> pl.Expr:
     return register_plugin_function(
         args=[expr],
         plugin_path=LIB,
-        function_name="unit_sum",
+        function_name="noop",
         is_elementwise=True,
     )
 

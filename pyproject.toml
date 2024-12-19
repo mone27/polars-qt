@@ -20,7 +20,7 @@ ignore_missing_imports = true
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["win-64"]
+platforms = ["win-64", "linux-64"]
 
 [tool.pixi.dependencies]
 python = ">=3.12"
@@ -32,6 +32,7 @@ mypy = "*"
 rust = "*"
 uv = ">=0.5.10,<0.6"
 ipykernel = "*"
+gcc = ">=14.2.0,<14.3"
 
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-unit"]
@@ -41,3 +42,5 @@ no-build-isolation = ["polars-unit"]
 # polars-unit = { path = ".", editable = true}
 
 [tool.pixi.tasks]
+
+build = "maturin develop --uv"

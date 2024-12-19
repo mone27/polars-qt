@@ -39,19 +39,23 @@ use std::fmt::Write;
 
 
 
-fn struct_point_2d_output(input_fields: &[Field]) -> PolarsResult<Field> {
+fn unit_output(input_fields: &[Field]) -> PolarsResult<Field> {
     let field = &input_fields[0];
     match field.dtype() {
         DataType::Struct(fields) => {
-            Ok(Field::new("struct_point_2d".into(), DataType::Struct(fields.clone())))
+            if let (Some(value_field), Some(unit_field)) = (fields.get(0), fields.get(1)){
+                Ok(Field::new("struct_point_2d".into(), DataType::Struct(fields.clone())))
+            } else {
+                polars_bail!(InvalidOperation: "wrong fields")
+            }
         }
         dtype => polars_bail!(InvalidOperation: "expected Struct dtype, got {}", dtype),
     }
 }
 
-#[polars_expr(output_type_func=struct_point_2d_output)]
-fn unit_sum(inputs: &[Series]) -> PolarsResult<Series> {
 
+#[polars_expr(output_type_func=unit_output)]
+fn noop(inputs: &[Series]) -> PolarsResult<Series> {
     let struct_ = inputs[0].struct_()?;
     let fields = struct_.fields_as_series();
 
