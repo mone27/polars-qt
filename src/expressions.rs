@@ -1,58 +1,33 @@
 #![allow(clippy::unused_unit)]
-use polars::prelude::*;
-use pyo3_polars::derive::polars_expr;
 use std::fmt::Write;
 
-// struct Quantity{
-//     value: i64,
-//     unit: String,
-// }
-
-
-// fn struct_quantity_output(input_fields: &[Field]) -> PolarsResult<Field> {
-//     let field = &input_fields[0];
-//     match field.dtype() {
-//         DataType::Struct(fields) => {
-//             Ok(Field::new("struct_quatity".into(), DataType::Struct(fields.clone())))
-//         }
-//         dtype => polars_bail!(InvalidOperation: "expected Struct dtype, got {}", dtype),
-//     }
-// }
-
-// #[polars_expr(output_type=String)]
-// fn unit_sum(inputs: &[Series]) -> PolarsResult<Series> {
-//     // let a = inputs[0].struct_()?;
-//     // let b = inputs[1].struct_()?;
-
-//     // let a_fields = a.fields_as_series();
-//     // let b_fields = b.fields_as_series();
-
-//     // if (a_fields != b_fields) {
-//     //     polars_bail!(InvalidOperation: "series must have some fields, got {} and {}", a_fields, b_fields)
-//     // }
-
-//     // check is the unit is the same
-
-//     let out = Series::new("sum".to_string(), "Ok".to_string());
-//     Ok(out.into_series())
-// }
-
-
+use polars::prelude::*;
+use pyo3_polars::derive::polars_expr;
 
 fn unit_output(input_fields: &[Field]) -> PolarsResult<Field> {
     let field = &input_fields[0];
     match field.dtype() {
         DataType::Struct(fields) => {
-            if let (Some(value_field), Some(unit_field)) = (fields.get(0), fields.get(1)){
-                Ok(Field::new("struct_point_2d".into(), DataType::Struct(fields.clone())))
+            if let (Some(value_field), Some(unit_field)) = (fields.get(0), fields.get(1)) {
+                if value_field.name == "value"
+                    && value_field.dtype.is_numeric()
+                    && unit_field.name == "unit"
+                    && unit_field.dtype == DataType::String
+                {
+                    Ok(Field::new(
+                        "struct_point_2d".into(),
+                        DataType::Struct(fields.clone()),
+                    ))
+                } else {
+                    polars_bail!(InvalidOperation: "Invalid Unit. Expected struct with fields 'value' and 'unit' and types numeric and String, got {:?}", fields)
+                }
             } else {
-                polars_bail!(InvalidOperation: "wrong fields")
+                polars_bail!(InvalidOperation: "Invalid Unit. Expected struct with 2 fields ('value' and 'unit'), got {:?} fields ({:?})", fields.len(), fields.into_iter().map(|f| f.name.clone()).collect::<Vec<_>>())
             }
-        }
-        dtype => polars_bail!(InvalidOperation: "expected Struct dtype, got {}", dtype),
+        },
+        dtype => polars_bail!(InvalidOperation: "Expected Struct dtype, got {}", dtype),
     }
 }
-
 
 #[polars_expr(output_type_func=unit_output)]
 fn noop(inputs: &[Series]) -> PolarsResult<Series> {
