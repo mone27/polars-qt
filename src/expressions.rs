@@ -1,12 +1,11 @@
 #![allow(clippy::unused_unit)]
 use polars::prelude::*;
-use polars_core::utils::arrow::legacy::is_valid;
 use pyo3_polars::derive::polars_expr;
 
 struct QuantityChuncked<T>
 where
     T: PolarsNumericType,
-    SeriesWrap<polars::prelude::ChunkedArray<T>>: polars::prelude::SeriesTrait
+    ChunkedArray<T>: IntoSeries,
 {
     value: ChunkedArray<T>,
     unit: ChunkedArray<StringType>,
@@ -15,10 +14,10 @@ where
 
 impl<T> QuantityChuncked<T>
 where
+    ChunkedArray<T>: IntoSeries,
     T: PolarsNumericType,
-    SeriesWrap<polars::prelude::ChunkedArray<T>>: polars::prelude::SeriesTrait
 {
-    fn from_series(&self, series: Series) -> PolarsResult<Self> {
+    fn from_series(series: &Series) -> PolarsResult<Self> {
         let quantity_array = series.struct_()?;
         is_valid_unit_dtype(quantity_array.dtype())?;
         let fields = &quantity_array.fields_as_series();
@@ -31,7 +30,10 @@ where
     }
 
     fn to_series(&self) -> PolarsResult<Series> {
-        let fields = (self.value.into_series(), self.unit.into_series());
+        let fields = vec![
+            self.value.clone().into_series(),
+            self.unit.clone().into_series(),
+        ];
         Ok(
             StructChunked::from_series(self.name.clone(), self.value.len(), fields.iter())?
                 .into_series(),
@@ -114,6 +116,13 @@ fn noop(inputs: &[Series]) -> PolarsResult<Series> {
 
     StructChunked::from_series(struct_.name().clone(), struct_.len(), fields.iter())
         .map(|ca| ca.into_series())
+}
+
+#[polars_expr(output_type_func=unit_output)]
+fn abs(inputs: &[Series]) -> PolarsResult<Series> {
+    let mut quantity = QuantityChuncked::<Int64Type>::from_series(inputs.get(0).unwrap())?;
+    quantity.value = quantity.value.apply_values(i64::abs);
+    quantity.to_series()
 }
 
 // fn apply_unary<F, T>(inputs: &[Series], func: F) -> PolarsResult<Series> where F: Fn(T) -> T, T: PolarsNumericType {

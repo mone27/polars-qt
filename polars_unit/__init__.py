@@ -22,3 +22,12 @@ def noop(expr: IntoExprColumn) -> pl.Expr:
         is_elementwise=True,
     )
 
+
+def abs(expr: IntoExprColumn) -> pl.Expr:
+    return register_plugin_function(
+        args=[expr],
+        plugin_path=LIB,
+        function_name="abs",
+        is_elementwise=True,
+    )
+
