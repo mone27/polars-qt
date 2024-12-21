@@ -1,43 +1,62 @@
 #![allow(clippy::unused_unit)]
-use std::intrinsics::unreachable;
-
 use polars::prelude::*;
 use polars_core::utils::arrow::legacy::is_valid;
 use pyo3_polars::derive::polars_expr;
 
-
-
-struct QuantityChuncked<'a, T> where T: PolarsNumericType {
-    value: &'a ChunkedArray<T>,
-    unit: &'a ChunkedArray<StringType>,
+struct QuantityChuncked<T>
+where
+    T: PolarsNumericType,
+    SeriesWrap<polars::prelude::ChunkedArray<T>>: polars::prelude::SeriesTrait
+{
+    value: ChunkedArray<T>,
+    unit: ChunkedArray<StringType>,
+    name: PlSmallStr,
 }
 
-// impl <T> UnitType<T> where T: PolarsNumericType {
-//     fn new(value: T, unit: String) -> Self {
-//         Self { value, unit }
-//     }
-
-    
-// }
-
-impl<'a, T> QuantityChuncked<'a, T> where T: PolarsNumericType{
-    fn from_series(&self, series: &'a Series) -> PolarsResult<Self>{
+impl<T> QuantityChuncked<T>
+where
+    T: PolarsNumericType,
+    SeriesWrap<polars::prelude::ChunkedArray<T>>: polars::prelude::SeriesTrait
+{
+    fn from_series(&self, series: Series) -> PolarsResult<Self> {
         let quantity_array = series.struct_()?;
         is_valid_unit_dtype(quantity_array.dtype())?;
-        let [value, unit] = &quantity_array.fields_as_series()[0..1];
-        let value_array = match unit.dtype() {
-            DataType::Int64 => value.i64().unwrap(),
-            _ => unreachable!("unit is numeric")
-        };
-        return Ok(Self{
-            value: value_array,
-            unit: unit.string_()
+        let fields = &quantity_array.fields_as_series();
+        let (value, unit) = (fields.get(0).unwrap(), fields.get(1).unwrap());
+        Ok(Self {
+            value: value.unpack::<T>().unwrap().clone(),
+            unit: unit.str().unwrap().clone(),
+            name: series.name().clone(),
         })
-
-
     }
-    
+
+    fn to_series(&self) -> PolarsResult<Series> {
+        let fields = (self.value.into_series(), self.unit.into_series());
+        Ok(
+            StructChunked::from_series(self.name.clone(), self.value.len(), fields.iter())?
+                .into_series(),
+        )
+    }
 }
+
+// impl<'a, T> QuantityChuncked<'a, T>
+// where
+//     T: PolarsNumericType,
+// {
+//     fn from_series(series: &'a Series) -> PolarsResult<Self> {
+//         let quantity_array = series.struct_()?;
+//         is_valid_unit_dtype(quantity_array.dtype())?;
+//         let fields = quantity_array.fields_as_series();
+
+//         let value = fields.get(0).unwrap().unpack::<T>()?;
+//         let unit = fields.get(1).unwrap().utf8()?;
+
+//         Ok(Self {
+//             value,
+//             unit,
+//         })
+//     }
+// }
 
 fn is_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
     match dtype {
@@ -59,7 +78,6 @@ fn is_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
         dtype => polars_bail!(InvalidOperation: "Expected Struct dtype, got {}", dtype),
     }
 }
-
 
 fn is_all_same<T: PartialEq>(slice: &[T]) -> bool {
     slice.windows(2).all(|w| w[0] == w[1])
@@ -103,6 +121,5 @@ fn noop(inputs: &[Series]) -> PolarsResult<Series> {
 //     is_valid_unit_dtype(quantity.dtype())?;
 //     let value = quantity.field_by_name("value")?;
 //     let unit = quantity.field_by_name("unit")?;
-
 
 // }
