@@ -6,7 +6,7 @@ venv
 *.so
 *.dll
 *.pyd
-
+.vscode
 
 # pixi environments
 .pixi
