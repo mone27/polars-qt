@@ -1,66 +1,8 @@
 #![allow(clippy::unused_unit)]
 use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
-
 use crate::expressions::polars_plan::prelude::Expr;
-
-// struct QuantityChuncked<T>
-// where
-//     T: PolarsNumericType,
-//     ChunkedArray<T>: IntoSeries,
-// {
-//     value: ChunkedArray<T>,
-//     unit: ChunkedArray<StringType>,
-//     name: PlSmallStr,
-// }
-
-// impl<T> QuantityChuncked<T>
-// where
-//     ChunkedArray<T>: IntoSeries,
-//     T: PolarsNumericType,
-// {
-//     fn from_series(series: &Series) -> PolarsResult<Self> {
-//         let quantity_array = series.struct_()?;
-//         is_valid_unit_dtype(quantity_array.dtype())?;
-//         let fields = &quantity_array.fields_as_series();
-//         let (value, unit) = (fields.get(0).unwrap(), fields.get(1).unwrap());
-//         Ok(Self {
-//             value: value.unpack::<T>().unwrap().clone(),
-//             unit: unit.str().unwrap().clone(),
-//             name: series.name().clone(),
-//         })
-//     }
-
-//     fn to_series(&self) -> PolarsResult<Series> {
-//         let fields = vec![
-//             self.value.clone().into_series(),
-//             self.unit.clone().into_series(),
-//         ];
-//         Ok(
-//             StructChunked::from_series(self.name.clone(), self.value.len(), fields.iter())?
-//                 .into_series(),
-//         )
-//     }
-// }
-
-// impl<'a, T> QuantityChuncked<'a, T>
-// where
-//     T: PolarsNumericType,
-// {
-//     fn from_series(series: &'a Series) -> PolarsResult<Self> {
-//         let quantity_array = series.struct_()?;
-//         is_valid_unit_dtype(quantity_array.dtype())?;
-//         let fields = quantity_array.fields_as_series();
-
-//         let value = fields.get(0).unwrap().unpack::<T>()?;
-//         let unit = fields.get(1).unwrap().utf8()?;
-
-//         Ok(Self {
-//             value,
-//             unit,
-//         })
-//     }
-// }
+use std::ops::Add;
 
 fn check_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
     match dtype {
@@ -95,40 +37,14 @@ fn unit_output(input_fields: &[Field]) -> PolarsResult<Field> {
     }
     // check that datatype is valid
     check_valid_unit_dtype(dtypes[0])?;
-    Ok(Field::new("unit".into(), DataType::String))
+    Ok(Field::new("unit".into(), DataType::Struct(
+        vec![
+            Field::new("value".into(), dtypes[0].clone()),
+            Field::new("unit".into(), DataType::String),
+        ]
+    )))
 }
 
-// #[polars_expr(output_type_func=unit_output)]
-// fn noop(inputs: &[Series]) -> PolarsResult<Series> {
-//     let struct_ = inputs[0].struct_()?;
-//     let fields = struct_.fields_as_series();
-
-//     if fields.is_empty() {
-//         return Ok(inputs[0].clone());
-//     }
-
-//     let fields = fields
-//         .iter()
-//         .map(|s| {
-//             let s = s.clone();
-//             println!("{:?}", s);
-//             s
-//         })
-//         .collect::<Vec<_>>();
-
-//     StructChunked::from_series(struct_.name().clone(), struct_.len(), fields.iter())
-//         .map(|ca| ca.into_series())
-// }
-
-#[polars_expr(output_type_func=unit_output)]
-fn abs(inputs: &[Series]) -> PolarsResult<Series> {
-    apply_unary(&inputs[0], col("value").abs())
-}
-
-#[polars_expr(output_type_func=unit_output)]
-fn noop(inputs: &[Series]) -> PolarsResult<Series> {
-    apply_unary(&inputs[0], col("value"))
-}
 
 fn check_same_unit(ca: &StringChunked) -> PolarsResult<()> {
     let mut iter = ca.iter();
@@ -140,25 +56,88 @@ fn check_same_unit(ca: &StringChunked) -> PolarsResult<()> {
     }
     }
 
-fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
+
+fn extract_unit(input: &Series) -> PolarsResult<(Series, Series)>{
     let ca = input.struct_()?;
     check_valid_unit_dtype(ca.dtype())?;
     let fields = &ca.fields_as_series();
     let (value, unit) = (
-        fields.get(0).unwrap(),
+        fields.get(0).unwrap().clone(),
         fields.get(1).unwrap().clone(),
     );
     check_same_unit(unit.str()?)?;
+
+    Ok((value, unit))
+}
+fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
+    let (value, unit) = extract_unit(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
-    let value = df["value"].clone();
+    let value = df["result"].clone();
     let fields = vec![value.as_series().unwrap().clone(), unit.into_series()];
     Ok(StructChunked::from_series(input.name().clone(), input.len(), fields.iter())?.into_series())
 }
 
-// fn apply_unary<F, T>(inputs: &[Series], func: F) -> PolarsResult<Series> where F: Fn(T) -> T, T: PolarsNumericType {
-//     let quantity = inputs[0].struct_()?;
-//     is_valid_unit_dtype(quantity.dtype())?;
-//     let value = quantity.field_by_name("value")?;
-//     let unit = quantity.field_by_name("unit")?;
+fn apply_binary(left: &Series, right: &Series, expr: Expr) -> PolarsResult<Series> {
+    let (value_left, unit_left) = extract_unit(left)?;
+    let (value_right, unit_right) = extract_unit(right)?;
+    let df = df!["value_left" => value_left, "value_right" => value_right]?.lazy().select(&[expr]).collect()?;
+    let result = df["result"].clone();
 
+    if unit_left.first() != unit_right.first() {
+        polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left.first(), unit_right.first())
+    }
+
+    let fields = vec![result.as_series().unwrap().clone(), unit_left.into_series()];
+    Ok(StructChunked::from_series(result.name().clone(), result.len(), fields.iter())?.into_series())
+}
+
+
+macro_rules! create_unit_unary_expr {
+    ($name:ident) => {
+        #[polars_expr(output_type_func=unit_output)]
+        fn $name(inputs: &[Series]) -> PolarsResult<Series> {
+            apply_unary(&inputs[0], col("value").$name().alias("result"))
+        }
+    };
+}
+
+macro_rules! create_unit_binary_expr {
+    ($name:ident) => {
+        #[polars_expr(output_type_func=unit_output)]
+        fn $name(inputs: &[Series]) -> PolarsResult<Series> {
+            apply_binary(&inputs[0], &inputs[1], col("value_left").$name(col("value_right")).alias("result"))
+        }
+    };
+}
+
+
+#[polars_expr(output_type_func=unit_output)]
+fn noop(inputs: &[Series]) -> PolarsResult<Series> {
+    apply_unary(&inputs[0], col("value").alias("result"))
+}
+
+// #[polars_expr(output_type_func=unit_output)]
+// fn abs(inputs: &[Series]) -> PolarsResult<Series> {
+//     apply_unary(&inputs[0], col("value").abs())
 // }
+
+create_unit_binary_expr!(add);
+create_unit_unary_expr!(abs);
+create_unit_unary_expr!(sin);
+create_unit_unary_expr!(arccos);
+create_unit_unary_expr!(arccosh);
+create_unit_unary_expr!(arcsin);
+create_unit_unary_expr!(arcsinh);
+create_unit_unary_expr!(arctan);
+create_unit_unary_expr!(arctanh);
+create_unit_unary_expr!(arg_max);
+create_unit_unary_expr!(arg_min);
+// create_unit_expr!(arg_sort);
+// create_unit_expr!(backward_fill);
+// create_unit_expr!(cast);
+create_unit_unary_expr!(cbrt);
+// create_unit_expr!(ceil);
+// create_unit_expr!(clip);
+create_unit_unary_expr!(cos);
+create_unit_unary_expr!(cosh);
+create_unit_unary_expr!(cot);

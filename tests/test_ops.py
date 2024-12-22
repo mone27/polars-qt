@@ -4,7 +4,7 @@ import pytest
 
 unit_dtype = pl.Struct(
     {
-        "value": pl.Int64,
+        "value": pl.Float64,
         "unit": pl.String,
     }
 )
@@ -109,33 +109,34 @@ class TestNoop:
 
 class TestUnaryOps:
 
-    def test_abs(self):
+    def _test_op(self, unit_op, polars_op):
+        """Tests that applying unit_op to a column of units is equivalent to applying polars_op to the values"""
         df = pl.DataFrame(
             {
                 "unit": pl.Series(
                     [
                         (-1, "m"),
-                        (-2, "m"),
-                        (-3, "m"),
-                        (-4, "m"),
-                        (-5, "m"),
-                    ],
-                    dtype=unit_dtype,
-                ),
-                "abs": pl.Series(
-                    [
+                        (0, "m"),
                         (1, "m"),
                         (2, "m"),
-                        (3, "m"),
-                        (4, "m"),
-                        (5, "m"),
                     ],
                     dtype=unit_dtype,
                 ),
             }
         )
-        assert (
-            df.with_columns(unit_abs=plu.abs("unit"))
-            .select(equal=(pl.col("unit_abs") == pl.col("abs")).all())["equal"]
+        return (
+            df.with_columns(unit_op=unit_op("unit"))
+            .select(equal=(
+                pl.col("unit_op").struct.field("value") == 
+                polars_op(pl.col("unit").struct.field("value"))
+            ).all())["equal"]
             .item()
         )
+
+    def test_abs(self): assert self._test_op(plu.abs, lambda x: x.abs())
+    
+    def test_sin(self): assert self._test_op(plu.sin, lambda x: x.sin())
+
+
+
+

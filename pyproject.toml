@@ -33,6 +33,7 @@ rust = "*"
 uv = ">=0.5.10,<0.6"
 ipykernel = "*"
 gcc = ">=14.2.0,<14.3"
+jupyterlab = ">=4.3.4,<5"
 
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-unit"]
@@ -44,3 +45,4 @@ no-build-isolation = ["polars-unit"]
 [tool.pixi.tasks]
 
 build = "maturin develop --uv"
+test = "pytest tests"
