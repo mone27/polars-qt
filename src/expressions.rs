@@ -2,44 +2,46 @@
 use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
 
-struct QuantityChuncked<T>
-where
-    T: PolarsNumericType,
-    ChunkedArray<T>: IntoSeries,
-{
-    value: ChunkedArray<T>,
-    unit: ChunkedArray<StringType>,
-    name: PlSmallStr,
-}
+use crate::expressions::polars_plan::prelude::Expr;
 
-impl<T> QuantityChuncked<T>
-where
-    ChunkedArray<T>: IntoSeries,
-    T: PolarsNumericType,
-{
-    fn from_series(series: &Series) -> PolarsResult<Self> {
-        let quantity_array = series.struct_()?;
-        is_valid_unit_dtype(quantity_array.dtype())?;
-        let fields = &quantity_array.fields_as_series();
-        let (value, unit) = (fields.get(0).unwrap(), fields.get(1).unwrap());
-        Ok(Self {
-            value: value.unpack::<T>().unwrap().clone(),
-            unit: unit.str().unwrap().clone(),
-            name: series.name().clone(),
-        })
-    }
+// struct QuantityChuncked<T>
+// where
+//     T: PolarsNumericType,
+//     ChunkedArray<T>: IntoSeries,
+// {
+//     value: ChunkedArray<T>,
+//     unit: ChunkedArray<StringType>,
+//     name: PlSmallStr,
+// }
 
-    fn to_series(&self) -> PolarsResult<Series> {
-        let fields = vec![
-            self.value.clone().into_series(),
-            self.unit.clone().into_series(),
-        ];
-        Ok(
-            StructChunked::from_series(self.name.clone(), self.value.len(), fields.iter())?
-                .into_series(),
-        )
-    }
-}
+// impl<T> QuantityChuncked<T>
+// where
+//     ChunkedArray<T>: IntoSeries,
+//     T: PolarsNumericType,
+// {
+//     fn from_series(series: &Series) -> PolarsResult<Self> {
+//         let quantity_array = series.struct_()?;
+//         is_valid_unit_dtype(quantity_array.dtype())?;
+//         let fields = &quantity_array.fields_as_series();
+//         let (value, unit) = (fields.get(0).unwrap(), fields.get(1).unwrap());
+//         Ok(Self {
+//             value: value.unpack::<T>().unwrap().clone(),
+//             unit: unit.str().unwrap().clone(),
+//             name: series.name().clone(),
+//         })
+//     }
+
+//     fn to_series(&self) -> PolarsResult<Series> {
+//         let fields = vec![
+//             self.value.clone().into_series(),
+//             self.unit.clone().into_series(),
+//         ];
+//         Ok(
+//             StructChunked::from_series(self.name.clone(), self.value.len(), fields.iter())?
+//                 .into_series(),
+//         )
+//     }
+// }
 
 // impl<'a, T> QuantityChuncked<'a, T>
 // where
@@ -60,7 +62,7 @@ where
 //     }
 // }
 
-fn is_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
+fn check_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
     match dtype {
         DataType::Struct(fields) => {
             if let (Some(value_field), Some(unit_field)) = (fields.get(0), fields.get(1)) {
@@ -92,37 +94,65 @@ fn unit_output(input_fields: &[Field]) -> PolarsResult<Field> {
         polars_bail!(InvalidOperation: "Expected all input fields to have the same dtype, got {:?}", dtypes)
     }
     // check that datatype is valid
-    is_valid_unit_dtype(dtypes[0])?;
+    check_valid_unit_dtype(dtypes[0])?;
     Ok(Field::new("unit".into(), DataType::String))
+}
+
+// #[polars_expr(output_type_func=unit_output)]
+// fn noop(inputs: &[Series]) -> PolarsResult<Series> {
+//     let struct_ = inputs[0].struct_()?;
+//     let fields = struct_.fields_as_series();
+
+//     if fields.is_empty() {
+//         return Ok(inputs[0].clone());
+//     }
+
+//     let fields = fields
+//         .iter()
+//         .map(|s| {
+//             let s = s.clone();
+//             println!("{:?}", s);
+//             s
+//         })
+//         .collect::<Vec<_>>();
+
+//     StructChunked::from_series(struct_.name().clone(), struct_.len(), fields.iter())
+//         .map(|ca| ca.into_series())
+// }
+
+#[polars_expr(output_type_func=unit_output)]
+fn abs(inputs: &[Series]) -> PolarsResult<Series> {
+    apply_unary(&inputs[0], col("value").abs())
 }
 
 #[polars_expr(output_type_func=unit_output)]
 fn noop(inputs: &[Series]) -> PolarsResult<Series> {
-    let struct_ = inputs[0].struct_()?;
-    let fields = struct_.fields_as_series();
-
-    if fields.is_empty() {
-        return Ok(inputs[0].clone());
-    }
-
-    let fields = fields
-        .iter()
-        .map(|s| {
-            let s = s.clone();
-            println!("{:?}", s);
-            s
-        })
-        .collect::<Vec<_>>();
-
-    StructChunked::from_series(struct_.name().clone(), struct_.len(), fields.iter())
-        .map(|ca| ca.into_series())
+    apply_unary(&inputs[0], col("value"))
 }
 
-#[polars_expr(output_type_func=unit_output)]
-fn abs(inputs: &[Series]) -> PolarsResult<Series> {
-    let mut quantity = QuantityChuncked::<Int64Type>::from_series(inputs.get(0).unwrap())?;
-    quantity.value = quantity.value.apply_values(i64::abs);
-    quantity.to_series()
+fn check_same_unit(ca: &StringChunked) -> PolarsResult<()> {
+    let mut iter = ca.iter();
+    let first = iter.next().unwrap();
+    if iter.all(|s| s == first) {
+        Ok(())
+    } else {
+        polars_bail!(InvalidOperation: "Expected all units to be the same, got {:?}", ca.unique())
+    }
+    }
+
+fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
+    let ca = input.struct_()?;
+    check_valid_unit_dtype(ca.dtype())?;
+    let fields = &ca.fields_as_series();
+    let (value, unit) = (
+        fields.get(0).unwrap(),
+        fields.get(1).unwrap().clone(),
+    );
+    check_same_unit(unit.str()?)?;
+    let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
+    let value = df["value"].clone();
+    let fields = vec![value.as_series().unwrap().clone(), unit.into_series()];
+    Ok(StructChunked::from_series(input.name().clone(), input.len(), fields.iter())?.into_series())
 }
 
 // fn apply_unary<F, T>(inputs: &[Series], func: F) -> PolarsResult<Series> where F: Fn(T) -> T, T: PolarsNumericType {
