@@ -72,7 +72,7 @@ fn extract_unit(input: &Series) -> PolarsResult<(Series, Series)>{
 fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
     let (value, unit) = extract_unit(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
-    let value = df["result"].clone();
+    let value = df["result"].clone().with_name("value".into());
     let fields = vec![value.as_series().unwrap().clone(), unit.into_series()];
     Ok(StructChunked::from_series(input.name().clone(), input.len(), fields.iter())?.into_series())
 }
