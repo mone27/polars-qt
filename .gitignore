@@ -7,6 +7,7 @@ venv
 *.dll
 *.pyd
 .vscode
+.ipynb_checkpoints
 
 # pixi environments
 .pixi

@@ -1,8 +1,11 @@
 #![allow(clippy::unused_unit)]
+use std::ops::{Add, Div, Mul, Neg, Sub};
+
+use polars::frame::column::ScalarColumn;
 use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
+
 use crate::expressions::polars_plan::prelude::Expr;
-use std::ops::Add;
 
 fn check_valid_unit_dtype(dtype: &DataType) -> PolarsResult<bool> {
     match dtype {
@@ -37,14 +40,14 @@ fn unit_output(input_fields: &[Field]) -> PolarsResult<Field> {
     }
     // check that datatype is valid
     check_valid_unit_dtype(dtypes[0])?;
-    Ok(Field::new("unit".into(), DataType::Struct(
-        vec![
+    Ok(Field::new(
+        "unit".into(),
+        DataType::Struct(vec![
             Field::new("value".into(), dtypes[0].clone()),
             Field::new("unit".into(), DataType::String),
-        ]
-    )))
+        ]),
+    ))
 }
-
 
 fn check_same_unit(ca: &StringChunked) -> PolarsResult<()> {
     let mut iter = ca.iter();
@@ -54,10 +57,9 @@ fn check_same_unit(ca: &StringChunked) -> PolarsResult<()> {
     } else {
         polars_bail!(InvalidOperation: "Expected all units to be the same, got {:?}", ca.unique())
     }
-    }
+}
 
-
-fn extract_unit(input: &Series) -> PolarsResult<(Series, Series)>{
+fn extract_unit(input: &Series) -> PolarsResult<(Series, Series)> {
     let ca = input.struct_()?;
     check_valid_unit_dtype(ca.dtype())?;
     let fields = &ca.fields_as_series();
@@ -69,34 +71,54 @@ fn extract_unit(input: &Series) -> PolarsResult<(Series, Series)>{
 
     Ok((value, unit))
 }
+
+fn add_unit(series: Series, unit_val: Scalar) -> PolarsResult<Series> {
+    let unit_col = ScalarColumn::new("unit".into(), unit_val, series.len());
+    let (name, len) = (series.name().clone(), series.len());
+    let fields = vec![series, unit_col.take_materialized_series()];
+    Ok(StructChunked::from_series(name, len, fields.iter())?.into_series())
+}
+
 fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
     let (value, unit) = extract_unit(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
-    let value = df["result"].clone().with_name("value".into());
-    let fields = vec![value.as_series().unwrap().clone(), unit.into_series()];
-    Ok(StructChunked::from_series(input.name().clone(), input.len(), fields.iter())?.into_series())
+    let value = df["result"]
+        .clone()
+        .with_name("value".into())
+        .take_materialized_series();
+    Ok(add_unit(value, unit.first())?)
+}
+
+fn extract_result(df: DataFrame) -> Series {
+    let idx = df.get_column_index("result").unwrap();
+    let result = df
+        .take_columns()
+        .remove(idx)
+        .with_name("value".into())
+        .take_materialized_series();
+    return result;
 }
 
 fn apply_binary(left: &Series, right: &Series, expr: Expr) -> PolarsResult<Series> {
     let (value_left, unit_left) = extract_unit(left)?;
     let (value_right, unit_right) = extract_unit(right)?;
-    let df = df!["value_left" => value_left, "value_right" => value_right]?.lazy().select(&[expr]).collect()?;
-    let result = df["result"].clone();
-
+    // for now support operations only if the units are the same
     if unit_left.first() != unit_right.first() {
         polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left.first(), unit_right.first())
     }
-
-    let fields = vec![result.as_series().unwrap().clone(), unit_left.into_series()];
-    Ok(StructChunked::from_series(result.name().clone(), result.len(), fields.iter())?.into_series())
+    let df: DataFrame = df!["value_left" => value_left, "value_right" => value_right]?
+        .lazy()
+        .select(&[expr])
+        .collect()?;
+    let result = extract_result(df);
+    return add_unit(result, unit_left.first());
 }
 
-
 macro_rules! create_unit_unary_expr {
-    ($name:ident) => {
+    ($name:ident $(, $arg:expr)*) => {
         #[polars_expr(output_type_func=unit_output)]
         fn $name(inputs: &[Series]) -> PolarsResult<Series> {
-            apply_unary(&inputs[0], col("value").$name().alias("result"))
+            apply_unary(&inputs[0], col("value").$name($($arg),*).alias("result"))
         }
     };
 }
@@ -105,11 +127,14 @@ macro_rules! create_unit_binary_expr {
     ($name:ident) => {
         #[polars_expr(output_type_func=unit_output)]
         fn $name(inputs: &[Series]) -> PolarsResult<Series> {
-            apply_binary(&inputs[0], &inputs[1], col("value_left").$name(col("value_right")).alias("result"))
+            apply_binary(
+                &inputs[0],
+                &inputs[1],
+                col("value_left").$name(col("value_right")).alias("result"),
+            )
         }
     };
 }
-
 
 #[polars_expr(output_type_func=unit_output)]
 fn noop(inputs: &[Series]) -> PolarsResult<Series> {
@@ -121,18 +146,14 @@ fn noop(inputs: &[Series]) -> PolarsResult<Series> {
 //     apply_unary(&inputs[0], col("value").abs())
 // }
 
-create_unit_binary_expr!(add);
 create_unit_unary_expr!(abs);
-create_unit_unary_expr!(sin);
+create_unit_binary_expr!(add);
 create_unit_unary_expr!(arccos);
 create_unit_unary_expr!(arccosh);
 create_unit_unary_expr!(arcsin);
 create_unit_unary_expr!(arcsinh);
 create_unit_unary_expr!(arctan);
 create_unit_unary_expr!(arctanh);
-create_unit_unary_expr!(arg_max);
-create_unit_unary_expr!(arg_min);
-// create_unit_expr!(arg_sort);
 // create_unit_expr!(backward_fill);
 // create_unit_expr!(cast);
 create_unit_unary_expr!(cbrt);
@@ -141,3 +162,35 @@ create_unit_unary_expr!(cbrt);
 create_unit_unary_expr!(cos);
 create_unit_unary_expr!(cosh);
 create_unit_unary_expr!(cot);
+// create_unit_unary_expr!(cum_count);
+create_unit_unary_expr!(cum_max, false);
+create_unit_unary_expr!(cum_min, false);
+create_unit_unary_expr!(cum_prod, false);
+// create_unit_unary_expr!(diff);
+
+create_unit_binary_expr!(dot);
+create_unit_unary_expr!(neg);
+// create_unit_unary_expr!(exp);
+// create_unit_unary_expr!(expm1);
+// create_unit_unary_expr!(floor);
+// create_unit_unary_expr!(log);
+// create_unit_unary_expr!(log1p);
+// create_unit_unary_expr!(log10);
+// create_unit_unary_expr!(log2);
+// create_unit_unary_expr!(round);
+// create_unit_unary_expr!(sign);
+create_unit_unary_expr!(sqrt);
+create_unit_unary_expr!(tan);
+create_unit_unary_expr!(tanh);
+create_unit_binary_expr!(sub);
+create_unit_unary_expr!(sin);
+create_unit_binary_expr!(mul);
+create_unit_binary_expr!(div);
+
+create_unit_unary_expr!(min);
+create_unit_unary_expr!(max);
+create_unit_unary_expr!(mean);
+create_unit_unary_expr!(median);
+create_unit_unary_expr!(std, 1);
+create_unit_unary_expr!(var, 1);
+create_unit_unary_expr!(sum);

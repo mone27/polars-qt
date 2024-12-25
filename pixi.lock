@@ -139,7 +139,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/rfc3339-validator-0.1.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rfc3986-validator-0.1.1-pyh9f0ad1d_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rpds-py-0.22.3-py313h920b4c0_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.8.3-py313he87ea70_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.8.4-py313he87ea70_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rust-1.83.0-h1a8d7c4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-x86_64-unknown-linux-gnu-1.83.0-h2c6d0dc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/send2trash-1.8.3-pyh0d859eb_1.conda
@@ -306,7 +306,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/rfc3339-validator-0.1.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rfc3986-validator-0.1.1-pyh9f0ad1d_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/win-64/rpds-py-0.22.3-py313hf3b5b86_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.8.3-py313h331c231_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.8.4-py313h331c231_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/rust-1.83.0-hf8d6059_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-x86_64-pc-windows-msvc-1.83.0-h17fc481_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/send2trash-1.8.3-pyh5737063_1.conda
@@ -417,8 +417,6 @@ packages:
   - libgcc >=13
   - python >=3.13.0rc1,<3.14.0a0
   - python_abi 3.13.* *_cp313
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 34900
@@ -433,8 +431,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 34467
@@ -541,8 +537,6 @@ packages:
   - python_abi 3.13.* *_cp313
   constrains:
   - libbrotlicommon 1.1.0 hb9d3cd8_2
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 350424
@@ -558,8 +552,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - libbrotlicommon 1.1.0 h2466b09_2
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 322309
@@ -634,8 +626,6 @@ packages:
   - pycparser
   - python >=3.13.0rc1,<3.14.0a0
   - python_abi 3.13.* *_cp313
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 295514
@@ -650,8 +640,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 291828
@@ -1063,8 +1051,6 @@ packages:
   depends:
   - python >=3.13.0rc1,<3.14.0a0
   - python_abi 3.13.* *_cp313
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   size: 17568
@@ -1075,8 +1061,6 @@ packages:
   depends:
   - python >=3.13.0rc1,<3.14.0a0
   - python_abi 3.13.* *_cp313
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   size: 42805
@@ -1817,8 +1801,6 @@ packages:
   - python_abi 3.13.* *_cp313
   constrains:
   - jinja2 >=3.0.0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   size: 24856
@@ -1834,8 +1816,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - jinja2 >=3.0.0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   size: 27930
@@ -2480,8 +2460,6 @@ packages:
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
   - winpty
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 210042
@@ -2495,8 +2473,6 @@ packages:
   - python >=3.13.0rc1,<3.14.0a0
   - python_abi 3.13.* *_cp313
   - yaml >=0.2.5,<0.3.0a0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 205855
@@ -2511,8 +2487,6 @@ packages:
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
   - yaml >=0.2.5,<0.3.0a0
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 181722
@@ -2612,8 +2586,6 @@ packages:
   - python_abi 3.13.* *_cp313
   constrains:
   - __glibc >=2.17
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 354807
@@ -2627,15 +2599,13 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 224928
   timestamp: 1733367205507
-- conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.8.3-py313he87ea70_0.conda
-  sha256: 5d4a53cca998fd1d5bb8f3a9487ad60ffdef8a56e04df570a6e785f9edefbaef
-  md5: f140fdf48951ad6bed3181b64deb34c9
+- conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.8.4-py313he87ea70_0.conda
+  sha256: d3540f3518e21bc2a91ae924678f21a8603aa81f8d0983ee654511890d89c735
+  md5: 7492b4d525da10451ce9156384abdaf1
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
@@ -2644,23 +2614,27 @@ packages:
   - python_abi 3.13.* *_cp313
   constrains:
   - __glibc >=2.17
+  arch: x86_64
+  platform: linux
   license: MIT
   license_family: MIT
-  size: 7930518
-  timestamp: 1734067017246
-- conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.8.3-py313h331c231_0.conda
-  sha256: af0833996c191e8ce33efb52491d845cf9c4537a8fa787fd67b2b44ff9fa3f41
-  md5: 410e3e4201bc0de6b0f9de9b63e4759e
+  size: 7943364
+  timestamp: 1734953532033
+- conda: https://conda.anaconda.org/conda-forge/win-64/ruff-0.8.4-py313h331c231_0.conda
+  sha256: 8c584defb1a89a0e74499c59cadef04d7b091caf2d23b2c2fe54722e72c9a4e4
+  md5: b149358787587f71269e2194bbc2dac7
   depends:
   - python >=3.13,<3.14.0a0
   - python_abi 3.13.* *_cp313
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
+  arch: x86_64
+  platform: win
   license: MIT
   license_family: MIT
-  size: 6918580
-  timestamp: 1734067315832
+  size: 6935404
+  timestamp: 1734954393133
 - conda: https://conda.anaconda.org/conda-forge/linux-64/rust-1.83.0-h1a8d7c4_0.conda
   sha256: 6f0315bdbbff5b1dbfab5b19543b847a0f69bbb9f2c23606fbbb819f7c0d3ffd
   md5: e08031c3eed610a6958c2856d9cb8bf9
@@ -3076,8 +3050,6 @@ packages:
   md5: 4cb3ad778ec2d5a7acbdf254eb1c42ae
   depends:
   - libgcc-ng >=9.4.0
-  arch: x86_64
-  platform: linux
   license: MIT
   license_family: MIT
   size: 89141
@@ -3088,8 +3060,6 @@ packages:
   depends:
   - vc >=14.1,<15.0a0
   - vs2015_runtime >=14.16.27012
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   size: 63274
@@ -3140,8 +3110,6 @@ packages:
   - python_abi 3.13.* *_cp313
   - zstd >=1.5.6,<1.5.7.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   size: 424424
@@ -3158,8 +3126,6 @@ packages:
   - vc14_runtime >=14.29.30139
   - zstd >=1.5.6,<1.5.7.0a0
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   size: 325703
@@ -3171,8 +3137,6 @@ packages:
   - libgcc-ng >=12
   - libstdcxx-ng >=12
   - libzlib >=1.2.13,<2.0.0a0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   size: 554846
@@ -3185,8 +3149,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   size: 349143

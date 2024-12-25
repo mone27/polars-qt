@@ -4,13 +4,11 @@ build-backend = "maturin"
 
 [project]
 name = "polars-unit"
+description = "Physical units for polars"
+authors = [{ name = "Simone Massaro", email = "mail@mone27.net" }]
 requires-python = ">=3.8"
-classifiers = [
-  "Programming Language :: Rust",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
-]
-
+classifiers = ["Programming Language :: Rust"]
+version = "0.1.0a"
 [tool.maturin]
 module-name = "polars_unit._internal"
 
@@ -31,9 +29,8 @@ pytest = "*"
 mypy = "*"
 rust = "*"
 uv = ">=0.5.10,<0.6"
-ipykernel = "*"
 gcc = ">=14.2.0,<14.3"
-jupyterlab = ">=4.3.4,<5"
+jupyterlab = "*"
 
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-unit"]
@@ -46,3 +43,4 @@ no-build-isolation = ["polars-unit"]
 
 build = "maturin develop --uv"
 test = "pytest tests"
+render_readme = "jupyter nbconvert --to markdown README.ipynb --output README.md"
