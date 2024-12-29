@@ -1,4 +1,3 @@
-import polars_qt as plu
 import polars as pl
 import pytest
 

@@ -9,6 +9,7 @@ use pyo3_polars::derive::polars_expr;
 use crate::expressions::polars_plan::prelude::Expr;
 use crate::units::*;
 
+#[allow(clippy::get_first)]
 fn check_valid_quantity_dtype(dtype: &DataType) -> PolarsResult<bool> {
     match dtype {
         DataType::Struct(fields) => {
@@ -23,7 +24,7 @@ fn check_valid_quantity_dtype(dtype: &DataType) -> PolarsResult<bool> {
                     polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with fields 'value' and 'unit' and types numeric and Unit, got {:?}", fields)
                 }
             } else {
-                polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with 2 fields ('value' and 'unit'), got {:?} fields ({:?})", fields.len(), fields.into_iter().map(|f| f.name.clone()).collect::<Vec<_>>())
+                polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with 2 fields ('value' and 'unit'), got {:?} fields ({:?})", fields.len(), fields.iter().map(|f| f.name.clone()).collect::<Vec<_>>())
             }
         },
         dtype => polars_bail!(InvalidOperation: "Expected Struct dtype, got {}", dtype),
@@ -61,6 +62,7 @@ fn check_same_unit(ca: &ListChunked) -> PolarsResult<()> {
     }
 }
 
+#[allow(clippy::get_first)]
 fn extract_quantity(input: &Series) -> PolarsResult<(Series, Series)> {
     let ca = input.struct_()?;
     check_valid_quantity_dtype(ca.dtype())?;
@@ -77,18 +79,16 @@ fn extract_quantity(input: &Series) -> PolarsResult<(Series, Series)> {
 fn add_unit(series: Series, unit_val: Scalar) -> PolarsResult<Series> {
     let unit_col = ScalarColumn::new("unit".into(), unit_val, series.len());
     let (name, len) = (series.name().clone(), series.len());
-    let fields = vec![series, unit_col.take_materialized_series()];
+    let fields = [series, unit_col.take_materialized_series()];
     Ok(StructChunked::from_series(name, len, fields.iter())?.into_series())
 }
 
 fn extract_result(df: DataFrame) -> Series {
     let idx = df.get_column_index("result").unwrap();
-    let result = df
-        .take_columns()
+    df.take_columns()
         .remove(idx)
         .with_name("value".into())
-        .take_materialized_series();
-    return result;
+        .take_materialized_series()
 }
 
 fn get_new_unit(
@@ -102,12 +102,10 @@ fn get_new_unit(
             Units::from_scalar(unit_right)?,
         )
         .to_scalar()?
+    } else if unit_left == unit_right {
+        polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left, unit_right)
     } else {
-        if unit_left != unit_right {
-            polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left, unit_right)
-        } else {
-            unit_left
-        }
+        unit_left
     })
 }
 
@@ -115,7 +113,7 @@ fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
     let (value, unit) = extract_quantity(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
     let result = extract_result(df);
-    return add_unit(result, unit.first());
+    add_unit(result, unit.first())
 }
 
 fn apply_binary(
@@ -132,7 +130,7 @@ fn apply_binary(
         .select(&[expr])
         .collect()?;
     let result = extract_result(df);
-    return add_unit(result, new_unit);
+    add_unit(result, new_unit)
 }
 
 macro_rules! create_unit_unary_expr {

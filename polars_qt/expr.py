@@ -4,6 +4,8 @@ import polars_qt as plu
 import polars as pl
 from functools import partial
 
+__all__  = ["QuantityDtype", "UnitDType"]
+
 UnitDType = pl.List(pl.Struct({"name": pl.Utf8, "power": pl.Int16}))
 
 def QuantityDtype(dtype: pl.DataType) -> pl.DataType:

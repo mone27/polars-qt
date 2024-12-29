@@ -38,19 +38,17 @@ impl Units {
 
     pub fn check_valid_unit_dtype(dtype: &DataType) -> PolarsResult<()> {
         if let DataType::List(inner) = dtype {
-            let inner = inner.as_ref();
             if let DataType::Struct(fields) = inner.as_ref() {
-                Self::check_unit_fields(&fields)
-            }
-            else {
+                Self::check_unit_fields(fields)
+            } else {
                 polars_bail!(ComputeError: "Invalid Unit dtype: expected List of Struct, got List of {:?}", inner)
             }
-        }
-        else {
+        } else {
             polars_bail!(ComputeError: "Invalid Unit dtype: expected List, got {:?}", dtype)
         }
     }
 
+    #[allow(clippy::get_first)]
     fn check_unit_fields(fields: &[Field]) -> PolarsResult<()> {
         if fields.len() != 2 {
             polars_bail!(ComputeError: "Unit struct must have 2 fields, got {:?}", fields.len());
