@@ -18,4 +18,5 @@ polars = { version = "0.45.1", default-features = false, features = [
     "lazy",
     "trigonometry",
     "cum_agg",
+    "dtype-i16",
 ] }

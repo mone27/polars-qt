@@ -70,4 +70,51 @@ impl Units {
         }
         polars_bail!(ComputeError: "Invalid Unit struct. Expected fields 'name' and 'power' with types String and Int16, got {:?}", fields);
     }
+
+    pub fn to_scalar(&self) -> PolarsResult<Scalar> {
+        let names: Series = self.units.iter().map(|u| u.name.clone()).collect();
+        let powers: Series = self.units.iter().map(|u| Some(u.power)).collect();
+        let ca_struct =
+            StructChunked::from_series("unit".into(), names.len(), [names, powers].iter())?;
+        Ok(Scalar::new(
+            DataType::List(Box::new(DataType::Struct(vec![
+                Field::new("name".into(), DataType::String),
+                Field::new("power".into(), DataType::Int16),
+            ]))),
+            AnyValue::List(ca_struct.into_series()),
+        ))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    fn test_to_scalar() {
+        let units = Units {
+            units: vec![
+                Unit {
+                    name: "m".to_string(),
+                    power: 1,
+                },
+                Unit {
+                    name: "s".to_string(),
+                    power: 2,
+                },
+            ],
+        };
+        let scalar = units.to_scalar().unwrap();
+        assert_eq!(
+            scalar.dtype(),
+            DataType::List(Box::new(DataType::Struct(vec![
+                Field::new("name".into(), DataType::String),
+                Field::new("power".into(), DataType::Int16),
+            ])))
+        );
+        let units = Units::from_scalar(scalar).unwrap();
+        assert_eq!(units.units.len(), 2);
+        assert_eq!(units.units[0].name, "m");
+        assert_eq!(units.units[0].power, 1);
+        assert_eq!(units.units[1].name, "s");
+        assert_eq!(units.units[1].power, 2);
+    }
 }
