@@ -1,4 +1,5 @@
 #![allow(clippy::unused_unit)]
+
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use polars::frame::column::ScalarColumn;
@@ -79,16 +80,6 @@ fn add_unit(series: Series, unit_val: Scalar) -> PolarsResult<Series> {
     Ok(StructChunked::from_series(name, len, fields.iter())?.into_series())
 }
 
-fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
-    let (value, unit) = extract_unit(input)?;
-    let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
-    let value = df["result"]
-        .clone()
-        .with_name("value".into())
-        .take_materialized_series();
-    Ok(add_unit(value, unit.first())?)
-}
-
 fn extract_result(df: DataFrame) -> Series {
     let idx = df.get_column_index("result").unwrap();
     let result = df
@@ -97,6 +88,12 @@ fn extract_result(df: DataFrame) -> Series {
         .with_name("value".into())
         .take_materialized_series();
     return result;
+}
+fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
+    let (value, unit) = extract_unit(input)?;
+    let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
+    let result = extract_result(df);
+    return add_unit(result, unit.first());
 }
 
 fn apply_binary(left: &Series, right: &Series, expr: Expr) -> PolarsResult<Series> {
