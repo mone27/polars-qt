@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "polars-qt"
 description = "Quantities (physicla units and uncertanties) for polars"
 authors = [{ name = "Simone Massaro", email = "mail@mone27.net" }]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = ["Programming Language :: Rust"]
 version = "0.2.0"
 [tool.maturin]
@@ -21,33 +21,32 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64"]
 
 [tool.pixi.dependencies]
-python = ">=3.12"
+python = ">=3.9"
 polars = "*"
 maturin = "*"
 ruff = "*"
 pytest = "*"
 mypy = "*"
 rust = "*"
-uv = ">=0.5.10,<0.6"
-gcc = ">=14.2.0,<14.3"
+uv = "*"
+gcc = "*"
 jupyterlab = "*"
 
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-qt"]
 
-[tool.pixi.features.py38]
-python = "3.8.*"
-[tool.pixi.features.py39]
+
+[tool.pixi.feature.py39.dependencies]
 python = "3.9.*"
-[tool.pixi.features.py310]
+[tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
-[tool.pixi.features.py311]
+[tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
-[tool.pixi.features.py312]
+[tool.pixi.feature.py312.dependencies]
 python = "3.12.*"
 
+
 [tool.pixi.environments]
-py38 = ["py38"]
 py39 = ["py39"]
 py310 = ["py310"]
 py311 = ["py311"]   

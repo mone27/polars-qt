@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        enviroment: [default, py38, py39, py310, py311, py312]
+        enviroment: [default, py39, py310, py311, py312]
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.8.0
