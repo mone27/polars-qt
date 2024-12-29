@@ -11,7 +11,7 @@ unit_dtype = pl.Struct(
 
 df = pl.DataFrame(
     {
-        "unit": pl.Series([1, 2, 3, 4, 5]).unit.with_u("m"),
+        "unit": pl.Series([1, 2, 3, 4, 5]).unit.with_("m"),
     }
 )
 
