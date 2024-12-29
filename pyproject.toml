@@ -35,6 +35,25 @@ jupyterlab = "*"
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-qt"]
 
+[tool.pixi.features.py38]
+python = "3.8.*"
+[tool.pixi.features.py39]
+python = "3.9.*"
+[tool.pixi.features.py310]
+python = "3.10.*"
+[tool.pixi.features.py311]
+python = "3.11.*"
+[tool.pixi.features.py312]
+python = "3.12.*"
+
+[tool.pixi.environments]
+py38 = ["py38"]
+py39 = ["py39"]
+py310 = ["py310"]
+py311 = ["py311"]   
+py312 = ["py312"]
+
+
 
 [tool.pixi.pypi-dependencies]
 # polars-qt = { path = ".", editable = true }
@@ -42,5 +61,12 @@ no-build-isolation = ["polars-qt"]
 [tool.pixi.tasks]
 
 build = "maturin develop --uv"
+build-release = "maturin develop --release --uv"
 test = "pytest tests"
 render_readme = "jupyter nbconvert --to markdown README.ipynb --output README.md"
+pre-commit = """
+cargo fmt --all && cargo clippy --all-features &&
+ruff check . --fix --exit-non-zero-on-fix &&
+ruff format . &&
+mypy tests
+"""
