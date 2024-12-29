@@ -4,9 +4,16 @@ import polars_unit as plu
 import polars as pl
 from functools import partial
 
+UnitDType = pl.List(pl.Struct({"name": pl.Utf8, "power": pl.Int16}))
 
-@pl.api.register_expr_namespace("unit")
-class UnitExpr:
+def QuantityDtype(dtype: pl.DataType) -> pl.DataType:
+    return pl.Struct({
+        "value": dtype,
+        "unit": UnitDType,
+    })
+
+@pl.api.register_expr_namespace("qt")
+class QuantityExpr:
     def __init__(self, expr: pl.Expr) -> None:
         self._expr = expr
 
@@ -41,16 +48,20 @@ class UnitExpr:
         return plu.functions.abs(self._expr)
 
 
-@pl.api.register_series_namespace("unit")
-class UnitSeries:
+@pl.api.register_series_namespace("qt")
+class QuantitySeries:
     def __init__(self, series: pl.Series) -> None:
         self._series = series
 
-    def with_(self, unit: str) -> pl.Expr:
+    def with_unit(self, units: list[tuple[str, int]]) -> pl.Expr:
         if not self._series.dtype.is_numeric():
             raise ValueError("Unit supports only numeric types")
+        unit_series = pl.Series([[
+            {"name": name, "power": power}
+            for name, power in units
+        ]], dtype=UnitDType)
         return pl.struct(
             value=self._series,
-            unit=pl.lit(unit).cast(pl.String),
+            unit=pl.lit(unit_series),
             eager=True,
         )

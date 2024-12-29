@@ -23,7 +23,7 @@ fn check_valid_quantity_dtype(dtype: &DataType) -> PolarsResult<bool> {
                     polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with fields 'value' and 'unit' and types numeric and Unit, got {:?}", fields)
                 }
             } else {
-                polars_bail!(InvalidOperation: "Invalid Quanity. Expected struct with 2 fields ('value' and 'unit'), got {:?} fields ({:?})", fields.len(), fields.into_iter().map(|f| f.name.clone()).collect::<Vec<_>>())
+                polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with 2 fields ('value' and 'unit'), got {:?} fields ({:?})", fields.len(), fields.into_iter().map(|f| f.name.clone()).collect::<Vec<_>>())
             }
         },
         dtype => polars_bail!(InvalidOperation: "Expected Struct dtype, got {}", dtype),
