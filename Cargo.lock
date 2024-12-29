@@ -1177,6 +1177,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "polars-qt"
+version = "0.1.0"
+dependencies = [
+ "polars",
+ "pyo3",
+ "pyo3-polars",
+ "serde",
+]
+
+[[package]]
 name = "polars-row"
 version = "0.45.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,16 +1240,6 @@ dependencies = [
  "slotmap",
  "tokio",
  "version_check",
-]
-
-[[package]]
-name = "polars-unit"
-version = "0.1.0"
-dependencies = [
- "polars",
- "pyo3",
- "pyo3-polars",
- "serde",
 ]
 
 [[package]]

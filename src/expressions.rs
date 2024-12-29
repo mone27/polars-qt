@@ -90,6 +90,27 @@ fn extract_result(df: DataFrame) -> Series {
         .take_materialized_series();
     return result;
 }
+
+fn get_new_unit(
+    unit_left: Scalar,
+    unit_right: Scalar,
+    unit_tfms: Option<fn(Units, Units) -> Units>,
+) -> PolarsResult<Scalar> {
+    Ok(if let Some(tfms) = unit_tfms {
+        tfms(
+            Units::from_scalar(unit_left)?,
+            Units::from_scalar(unit_right)?,
+        )
+        .to_scalar()?
+    } else {
+        if unit_left != unit_right {
+            polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left, unit_right)
+        } else {
+            unit_left
+        }
+    })
+}
+
 fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
     let (value, unit) = extract_quantity(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
@@ -101,28 +122,16 @@ fn apply_binary(
     left: &Series,
     right: &Series,
     expr: Expr,
-    unit_tfms: Option<fn(Units, Units) -> Units>,
+    unit_tfms: Option<fn(Units, Units) -> Units>, // TODO: the absence of this should imply that the units should be the same, not sure this is a good API to use an Option for it
 ) -> PolarsResult<Series> {
     let (value_left, unit_left) = extract_quantity(left)?;
     let (value_right, unit_right) = extract_quantity(right)?;
-    // for now support operations only if the units are the same
-    if unit_left.first() != unit_right.first() {
-        polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left.first(), unit_right.first())
-    }
+    let new_unit = get_new_unit(unit_left.first(), unit_right.first(), unit_tfms)?;
     let df: DataFrame = df!["value_left" => value_left, "value_right" => value_right]?
         .lazy()
         .select(&[expr])
         .collect()?;
     let result = extract_result(df);
-    let new_unit = if let Some(tfms) = unit_tfms {
-        tfms(
-            Units::from_scalar(unit_left.first())?,
-            Units::from_scalar(unit_right.first())?,
-        )
-        .to_scalar()?
-    } else {
-        unit_left.first()
-    };
     return add_unit(result, new_unit);
 }
 

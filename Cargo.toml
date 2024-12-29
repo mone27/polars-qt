@@ -1,10 +1,10 @@
 [package]
-name = "polars-unit"
+name = "polars-qt"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "polars_unit"
+name = "polars_qt"
 crate-type = ["cdylib"]
 
 [dependencies]

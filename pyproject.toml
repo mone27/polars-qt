@@ -3,14 +3,14 @@ requires = ["maturin>=1.0,<2.0", "polars>=1.3.0"]
 build-backend = "maturin"
 
 [project]
-name = "polars-unit"
-description = "Physical units for polars"
+name = "polars-qt"
+description = "Quantities (physicla units and uncertanties) for polars"
 authors = [{ name = "Simone Massaro", email = "mail@mone27.net" }]
 requires-python = ">=3.8"
 classifiers = ["Programming Language :: Rust"]
-version = "0.1.0a"
+version = "0.2.0"
 [tool.maturin]
-module-name = "polars_unit._internal"
+module-name = "polars_qt._internal"
 
 [[tool.mypy.overrides]]
 module = "polars.utils.udfs"
@@ -33,11 +33,11 @@ gcc = ">=14.2.0,<14.3"
 jupyterlab = "*"
 
 [tool.pixi.pypi-options]
-no-build-isolation = ["polars-unit"]
+no-build-isolation = ["polars-qt"]
 
 
 [tool.pixi.pypi-dependencies]
-# polars-unit = { path = ".", editable = true}
+# polars-qt = { path = ".", editable = true }
 
 [tool.pixi.tasks]
 

@@ -43,10 +43,10 @@ from typing import TYPE_CHECKING
 import polars as pl
 from polars.plugins import register_plugin_function
 
-from polars_unit._internal import __version__ as __version__
+from polars_qt._internal import __version__ as __version__
 
 if TYPE_CHECKING:
-    from polars_unit.typing import IntoExprColumn
+    from polars_qt.typing import IntoExprColumn
 
 LIB = Path(__file__).parent
 

@@ -1,6 +1,6 @@
 """Add unit to Polars expressions API"""
 
-import polars_unit as plu
+import polars_qt as plu
 import polars as pl
 from functools import partial
 

@@ -1,5 +1,5 @@
 import polars as pl
-import polars_unit as plqt
+import polars_qt as plqt
 import pytest
 
 
