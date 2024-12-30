@@ -1,12 +1,13 @@
 """Add unit to Polars expressions API"""
 
+from typing import Optional
 import polars_qt as plu
 import polars as pl
 from functools import partial
 
 __all__  = ["QuantityDtype", "UnitDType"]
 
-UnitDType = pl.List(pl.Struct({"name": pl.Utf8, "power": pl.Int16}))
+UnitDType = pl.List(pl.Struct({"name": pl.Utf8, "power": pl.Struct({"numer": pl.Int64, "denom": pl.Int64})}))
 
 def QuantityDtype(dtype: pl.DataType) -> pl.DataType:
     return pl.Struct({
@@ -55,11 +56,15 @@ class QuantitySeries:
     def __init__(self, series: pl.Series) -> None:
         self._series = series
 
-    def with_unit(self, units: list[tuple[str, int]]) -> pl.Expr:
+    def with_unit(self, units: list[tuple[str, Optional[tuple[int, int]]]]) -> pl.Expr:
         if not self._series.dtype.is_numeric():
             raise ValueError("Unit supports only numeric types")
+        # default to (1, 1) if no power is provided
+        # units = [(unit[0], (1, 1)  else unit) for unit in units]
+        # default denominator to 1 if not provided
+        # units = [(name, (power[0], 1) if len(power)==1 else power) for name, power in units]
         unit_series = pl.Series([[
-            {"name": name, "power": power}
+            {"name": name, "power": {"numer": power[0], "denom": power[1]}}
             for name, power in units
         ]], dtype=UnitDType)
         return pl.struct(

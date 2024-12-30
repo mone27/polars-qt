@@ -34,11 +34,12 @@ __all__ = [
     "std",
     "var",
     "sum",
+    "pow",
 ]
 
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from polars.plugins import register_plugin_function
@@ -51,12 +52,13 @@ if TYPE_CHECKING:
 LIB = Path(__file__).parent
 
 
-def plugin_fn(name: str, *args, is_elem=True) -> pl.Expr:
+def plugin_fn(name: str, *args, is_elem=True,  kwargs: dict[str, Any] | None = None) -> pl.Expr:
     return register_plugin_function(
         args=list(args),
         plugin_path=LIB,
         function_name=name,
         is_elementwise=is_elem,
+        kwargs=kwargs,
     )
 
 
@@ -194,3 +196,13 @@ def var(expr: IntoExprColumn) -> pl.Expr:
 
 def sum(expr: IntoExprColumn) -> pl.Expr:
     return plugin_fn("sum", expr, is_elem=False)
+
+
+def pow(expr, exp: int | float) -> pl.Expr:
+    if isinstance(exp, int):
+        return plugin_fn("pow_int", expr, kwargs={"exp": exp})
+    elif isinstance(exp, float):
+        return plugin_fn("pow_float", expr, kwargs={"exp": exp})
+    else:
+        raise ValueError("Exponenet must be int or float for quantities")
+    

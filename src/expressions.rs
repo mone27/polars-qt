@@ -5,6 +5,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use polars::frame::column::ScalarColumn;
 use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
+use serde::Deserialize;
 
 use crate::expressions::polars_plan::prelude::Expr;
 use crate::units::*;
@@ -109,11 +110,22 @@ fn get_new_unit(
     })
 }
 
-fn apply_unary(input: &Series, expr: Expr) -> PolarsResult<Series> {
+fn apply_unary<F>(input: &Series, expr: Expr, unit_tfms: Option<F>) -> PolarsResult<Series>
+where
+    F: Fn(Units) -> Units,
+{
     let (value, unit) = extract_quantity(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
     let result = extract_result(df);
-    add_unit(result, unit.first())
+    println!("input: {:?}", input);
+    println!("result: {:?}", result);
+    println!("unit: {:?}", unit);
+    let new_unit = if let Some(tfms) = unit_tfms {
+        tfms(Units::from_scalar(unit.first())?).to_scalar()? // TODo this always runs
+    } else {
+        unit.first()
+    };
+    add_unit(result, new_unit)
 }
 
 fn apply_binary(
@@ -137,7 +149,7 @@ macro_rules! create_unit_unary_expr {
     ($name:ident $(, $arg:expr)*) => {
         #[polars_expr(output_type_func=quantity_output)]
         fn $name(inputs: &[Series]) -> PolarsResult<Series> {
-            apply_unary(&inputs[0], col("value").$name($($arg),*).alias("result"))
+            apply_unary::<fn(Units) -> Units>(&inputs[0], col("value").$name($($arg),*).alias("result"), None)
         }
     };
 }
@@ -169,7 +181,40 @@ macro_rules! create_unit_binary_expr {
 
 #[polars_expr(output_type_func=quantity_output)]
 fn noop(inputs: &[Series]) -> PolarsResult<Series> {
-    apply_unary(&inputs[0], col("value").alias("result"))
+    apply_unary::<fn(Units) -> Units>(&inputs[0], col("value").alias("result"), None)
+}
+
+#[derive(Deserialize)]
+struct PowIntKwarg {
+    exp: i64,
+}
+
+#[polars_expr(output_type_func=quantity_output)]
+fn pow_int(inputs: &[Series], kwargs: PowIntKwarg) -> PolarsResult<Series> {
+    apply_unary(
+        &inputs[0],
+        col("value").pow(kwargs.exp).alias("result"),
+        Some(|u: Units| u.pow_int(kwargs.exp)),
+    )
+}
+
+#[derive(Deserialize)]
+struct PowFloatKwarg {
+    exp: f64,
+}
+
+#[polars_expr(output_type_func=quantity_output)]
+fn pow_float(inputs: &[Series], kwargs: PowFloatKwarg) -> PolarsResult<Series> {
+    apply_unary(
+        &inputs[0],
+        col("value").pow(kwargs.exp).alias("result"),
+        Some(|u: Units| u.pow_float(kwargs.exp)),
+    )
+}
+
+#[polars_expr(output_type_func=quantity_output)]
+fn sqrt(inputs: &[Series]) -> PolarsResult<Series> {
+    apply_unary(&inputs[0], col("value").sqrt().alias("result"), Some(|u: Units| u.sqrt()))
 }
 
 create_unit_unary_expr!(abs);
@@ -205,7 +250,6 @@ create_unit_unary_expr!(neg);
 // create_unit_unary_expr!(log2);
 // create_unit_unary_expr!(round);
 // create_unit_unary_expr!(sign);
-create_unit_unary_expr!(sqrt);
 create_unit_unary_expr!(tan);
 create_unit_unary_expr!(tanh);
 create_unit_binary_expr!(sub);

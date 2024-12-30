@@ -1,9 +1,11 @@
+use num_rational::Rational64;
+use num_traits::FromPrimitive;
 use polars::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit {
     name: std::string::String,
-    power: i16,
+    power: Rational64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13,6 +15,9 @@ pub struct Units {
 
 impl Units {
     pub fn from_scalar(scalar: Scalar) -> PolarsResult<Self> {
+        if scalar.is_null() {
+            polars_bail!(ComputeError: "Unit is Null");
+        }
         if let AnyValue::List(list) = scalar.value() {
             let ca_units: &StructChunked = list.struct_()?;
             if ca_units.has_nulls() {
@@ -21,13 +26,15 @@ impl Units {
             // check that the dtype is correct
             Self::check_unit_fields(ca_units.struct_fields())?;
             let fields = ca_units.fields_as_series();
-            let (names, powers) = (fields[0].str()?, fields[1].i16()?);
+            let (names, powers) = (fields[0].str()?, fields[1].struct_()?);
+            let powers = powers.fields_as_series();
+            let (numer, demon) = (powers[0].i64()?, powers[1].i64()?);
             let units = names
                 .iter()
-                .zip(powers)
+                .zip(numer.into_iter().zip(demon.into_iter()))
                 .map(|(name, power)| Unit {
                     name: name.unwrap().to_string(), // safe to unwrap because we checked for nulls
-                    power: power.unwrap(),
+                    power: Rational64::new(power.0.unwrap(), power.1.unwrap()),
                 })
                 .collect::<Vec<Unit>>();
             Ok(Self { units })
@@ -58,7 +65,11 @@ impl Units {
         if name_field.name() == "name"
             && name_field.dtype() == &DataType::String
             && power_field.name() == "power"
-            && power_field.dtype() == &DataType::Int16
+            && power_field.dtype()
+                == &DataType::Struct(vec![
+                    Field::new("numer".into(), DataType::Int64),
+                    Field::new("denom".into(), DataType::Int64),
+                ])
         {
             return Ok(());
         }
@@ -66,7 +77,18 @@ impl Units {
     }
     pub fn to_scalar(&self) -> PolarsResult<Scalar> {
         let names: Series = self.units.iter().map(|u| u.name.clone()).collect();
-        let powers: Series = self.units.iter().map(|u| Some(u.power)).collect();
+        let numers: Series = self.units.iter().map(|u| Some(*u.power.numer())).collect();
+        let denoms: Series = self.units.iter().map(|u| Some(*u.power.denom())).collect();
+        let powers = StructChunked::from_series(
+            "power".into(),
+            self.units.len(),
+            [
+                numers.with_name("numer".into()),
+                denoms.with_name("denom".into()),
+            ]
+            .iter(),
+        )?
+        .into_series();
         let ca_struct = StructChunked::from_series(
             "unit".into(),
             names.len(),
@@ -111,10 +133,52 @@ impl Units {
         }
         Self { units }
     }
+
+    pub fn pow_int(&self, n: i64) -> Self {
+        let units = self
+            .units
+            .iter()
+            .map(|u| Unit {
+                name: u.name.clone(),
+                power: (u.power * n).reduced(),
+            })
+            .collect();
+        Self { units }
+    }
+
+    pub fn pow_float(&self, n: f64) -> Self {
+        let units = self
+            .units
+            .iter()
+            .map(|u| Unit {
+                name: u.name.clone(),
+                power: u.power * Rational64::from_f64(n).unwrap(),
+            })
+            .collect();
+        Self { units }
+    }
+
+    pub fn pow_rat(&self, n: Rational64) -> Self {
+        let units = self
+            .units
+            .iter()
+            .map(|u| Unit {
+                name: u.name.clone(),
+                power: u.power * n,
+            })
+            .collect();
+        Self { units }
+    }
+
+    pub fn sqrt(&self) -> Self {
+        self.pow_rat(num_rational::Rational64::new(1, 2))
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use num_rational::Rational64;
+
     use super::*;
 
     #[test]
@@ -123,11 +187,11 @@ mod test {
             units: vec![
                 Unit {
                     name: "m".to_string(),
-                    power: 1,
+                    power: Rational64::new(1, 1),
                 },
                 Unit {
                     name: "s".to_string(),
-                    power: 2,
+                    power: Rational64::new(2, 1),
                 },
             ],
         };
@@ -135,9 +199,9 @@ mod test {
         let units = Units::from_scalar(scalar).unwrap();
         assert_eq!(units.units.len(), 2);
         assert_eq!(units.units[0].name, "m");
-        assert_eq!(units.units[0].power, 1);
+        assert_eq!(units.units[0].power, Rational64::new(1, 1));
         assert_eq!(units.units[1].name, "s");
-        assert_eq!(units.units[1].power, 2);
+        assert_eq!(units.units[1].power, Rational64::new(2, 1));
     }
 
     #[test]
@@ -161,11 +225,11 @@ mod test {
             units: vec![
                 Unit {
                     name: "m".to_string(),
-                    power: 1,
+                    power: Rational64::new(1, 1),
                 },
                 Unit {
                     name: "s".to_string(),
-                    power: 2,
+                    power: Rational64::new(2, 1),
                 },
             ],
         };
@@ -173,20 +237,20 @@ mod test {
             units: vec![
                 Unit {
                     name: "m".to_string(),
-                    power: 2,
+                    power: Rational64::new(2, 1),
                 },
                 Unit {
                     name: "s".to_string(),
-                    power: 3,
+                    power: Rational64::new(3, 1),
                 },
             ],
         };
         let units = units1.multiply(&units2);
         assert_eq!(units.units.len(), 2);
         assert_eq!(units.units[0].name, "m");
-        assert_eq!(units.units[0].power, 3);
+        assert_eq!(units.units[0].power, Rational64::new(3, 1));
         assert_eq!(units.units[1].name, "s");
-        assert_eq!(units.units[1].power, 5);
+        assert_eq!(units.units[1].power, Rational64::new(5, 1));
     }
 
     #[test]
@@ -195,11 +259,11 @@ mod test {
             units: vec![
                 Unit {
                     name: "m".to_string(),
-                    power: 1,
+                    power: Rational64::new(1, 1),
                 },
                 Unit {
                     name: "s".to_string(),
-                    power: 2,
+                    power: Rational64::new(2, 1),
                 },
             ],
         };
@@ -207,19 +271,19 @@ mod test {
             units: vec![
                 Unit {
                     name: "m".to_string(),
-                    power: 2,
+                    power: Rational64::new(2, 1),
                 },
                 Unit {
                     name: "s".to_string(),
-                    power: 3,
+                    power: Rational64::new(3, 1),
                 },
             ],
         };
         let units = units1.divide(&units2);
         assert_eq!(units.units.len(), 2);
         assert_eq!(units.units[0].name, "m");
-        assert_eq!(units.units[0].power, -1);
+        assert_eq!(units.units[0].power, Rational64::new(-1, 1));
         assert_eq!(units.units[1].name, "s");
-        assert_eq!(units.units[1].power, -1);
+        assert_eq!(units.units[1].power, Rational64::new(-1, 1));
     }
 }
