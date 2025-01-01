@@ -31,7 +31,7 @@ impl Units {
             let (numer, demon) = (powers[0].i64()?, powers[1].i64()?);
             let units = names
                 .iter()
-                .zip(numer.into_iter().zip(demon.into_iter()))
+                .zip(numer.into_iter().zip(demon))
                 .map(|(name, power)| Unit {
                     name: name.unwrap().to_string(), // safe to unwrap because we checked for nulls
                     power: Rational64::new(power.0.unwrap(), power.1.unwrap()),
@@ -73,7 +73,7 @@ impl Units {
         {
             return Ok(());
         }
-        polars_bail!(ComputeError: "Invalid Unit struct. Expected fields 'name' and 'power' with types String and Int16, got {:?}", fields);
+        polars_bail!(ComputeError: "Invalid Unit struct. Expected fields 'name' and 'power' with types String and Int64, Int64, got {:?}", fields);
     }
     pub fn to_scalar(&self) -> PolarsResult<Scalar> {
         let names: Series = self.units.iter().map(|u| u.name.clone()).collect();
@@ -101,7 +101,13 @@ impl Units {
         Ok(Scalar::new(
             DataType::List(Box::new(DataType::Struct(vec![
                 Field::new("name".into(), DataType::String),
-                Field::new("power".into(), DataType::Int16),
+                Field::new(
+                    "power".into(),
+                    DataType::Struct(vec![
+                        Field::new("numer".into(), DataType::Int64),
+                        Field::new("denom".into(), DataType::Int64),
+                    ]),
+                ),
             ]))),
             AnyValue::List(ca_struct.into_series()),
         ))
@@ -178,6 +184,7 @@ impl Units {
 #[cfg(test)]
 mod test {
     use num_rational::Rational64;
+    use polars::frame::column::ScalarColumn;
 
     use super::*;
 
@@ -196,6 +203,31 @@ mod test {
             ],
         };
         let scalar = units.to_scalar().unwrap();
+        let units = Units::from_scalar(scalar).unwrap();
+        assert_eq!(units.units.len(), 2);
+        assert_eq!(units.units[0].name, "m");
+        assert_eq!(units.units[0].power, Rational64::new(1, 1));
+        assert_eq!(units.units[1].name, "s");
+        assert_eq!(units.units[1].power, Rational64::new(2, 1));
+    }
+
+    #[test]
+    fn test_to_scalar_series() {
+        let units = Units {
+            units: vec![
+                Unit {
+                    name: "m".to_string(),
+                    power: Rational64::new(1, 1),
+                },
+                Unit {
+                    name: "s".to_string(),
+                    power: Rational64::new(2, 1),
+                },
+            ],
+        };
+        let scalar = units.to_scalar().unwrap();
+        let series = ScalarColumn::new("unit".into(), scalar, 10).take_materialized_series();
+        let scalar = series.first();
         let units = Units::from_scalar(scalar).unwrap();
         assert_eq!(units.units.len(), 2);
         assert_eq!(units.units[0].name, "m");
