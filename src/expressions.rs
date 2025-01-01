@@ -78,6 +78,7 @@ fn extract_quantity(input: &Series) -> PolarsResult<(Series, Series)> {
 }
 
 fn add_unit(series: Series, unit_val: Scalar) -> PolarsResult<Series> {
+    println!("add_unit: unit_val: {:?}", unit_val);
     let unit_col = ScalarColumn::new("unit".into(), unit_val, series.len());
     let (name, len) = (series.name().clone(), series.len());
     let fields = [series, unit_col.take_materialized_series()];
@@ -117,14 +118,14 @@ where
     let (value, unit) = extract_quantity(input)?;
     let df = df!["value" => value]?.lazy().select(&[expr]).collect()?;
     let result = extract_result(df);
-    println!("input: {:?}", input);
-    println!("result: {:?}", result);
-    println!("unit: {:?}", unit);
     let new_unit = if let Some(tfms) = unit_tfms {
-        tfms(Units::from_scalar(unit.first())?).to_scalar()? // TODo this always runs
+        tfms(Units::from_scalar(unit.first())?).to_scalar()?
     } else {
         unit.first()
     };
+    println!("input: {:?}", input);
+    println!("result: {:?}", result);
+    println!("unit: {:?}", unit);
     add_unit(result, new_unit)
 }
 
@@ -214,7 +215,11 @@ fn pow_float(inputs: &[Series], kwargs: PowFloatKwarg) -> PolarsResult<Series> {
 
 #[polars_expr(output_type_func=quantity_output)]
 fn sqrt(inputs: &[Series]) -> PolarsResult<Series> {
-    apply_unary(&inputs[0], col("value").sqrt().alias("result"), Some(|u: Units| u.sqrt()))
+    apply_unary(
+        &inputs[0],
+        col("value").sqrt().alias("result"),
+        Some(|u: Units| u.sqrt()),
+    )
 }
 
 create_unit_unary_expr!(abs);
@@ -264,3 +269,76 @@ create_unit_unary_expr!(median);
 create_unit_unary_expr!(std, 1);
 create_unit_unary_expr!(var, 1);
 create_unit_unary_expr!(sum);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_pow_int() {
+        let unit_dtype = DataType::List(Box::new(DataType::Struct(vec![
+            Field::new("name".into(), DataType::String),
+            Field::new(
+                "power".into(),
+                DataType::Struct(vec![
+                    Field::new("numer".into(), DataType::Int64),
+                    Field::new("denom".into(), DataType::Int64),
+                ]),
+            ),
+        ])));
+
+        let quantity_dtype = DataType::Struct(vec![
+            Field::new("value".into(), DataType::Int32),
+            Field::new("unit".into(), unit_dtype.clone()),
+        ]);
+
+        let unit = df!(
+            "name" => &["m", "m", "m"],
+            "power" => df!(
+                "numer"=> Series::new("numer".into(), &[1, 1, 1]).cast(&DataType::Int64).unwrap(),
+                "denom"=> Series::new("denom".into(), &[1, 1, 1]).cast(&DataType::Int64).unwrap()
+            ).unwrap().into_struct("power".into()).into_series()
+        )
+        .unwrap()
+        .into_struct("unit".into())
+        .into_series();
+
+        let s = df!(
+            "value" => &[1,2,3],
+            "unit" => &[unit.clone(), unit.clone(), unit.clone()]
+        )
+        .unwrap()
+        .into_struct("quantity".into())
+        .into_series();
+
+        assert_eq!(s.dtype(), &quantity_dtype);
+
+        let s_pow = apply_unary(
+            &s,
+            col("value").pow(2).alias("result"),
+            Some(|u: Units| u.pow_int(2)),
+        )
+        .unwrap();
+
+        let expected_unit = df!(
+            "name" => &["m", "m", "m"],
+            "power" => df!(
+                "numer"=> Series::new("numer".into(), &[2, 2, 2]).cast(&DataType::Int64).unwrap(),
+                "denom"=> Series::new("denom".into(), &[1, 1, 1]).cast(&DataType::Int64).unwrap()
+            ).unwrap().into_struct("power".into()).into_series()
+        )
+        .unwrap()
+        .into_struct("unit".into())
+        .into_series();
+
+        let expected = df!(
+            "value" => &[1, 4, 9],
+            "unit" => &[expected_unit.clone(), expected_unit.clone(), expected_unit.clone()]
+        )
+        .unwrap()
+        .into_struct("quantity".into())
+        .into_series();
+
+        assert_eq!(s_pow.eq(&expected), true);
+    }
+}

@@ -5,7 +5,7 @@ import pytest
 
 df = pl.DataFrame(
     {
-        "qt": pl.Series([1, 2, 3, 4, 5]).qt.with_unit([("m", (1, 1))]),
+        "qt": pl.Series([1, 2, 3, 4, 5]).qt.with_unit([("m", (1, 1))]),  # type: ignore[attr-defined]
     }
 )
 
@@ -48,9 +48,24 @@ class TestNoop:
             {
                 "a": pl.Series(
                     [
-                        {"value": 1, "unittt": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 2, "unittt": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 3, "unittt": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
+                        {
+                            "value": 1,
+                            "unittt": [
+                                {"name": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
+                        {
+                            "value": 2,
+                            "unittt": [
+                                {"name": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
+                        {
+                            "value": 3,
+                            "unittt": [
+                                {"name": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
                     ]
                 )
             }
@@ -65,9 +80,24 @@ class TestNoop:
             {
                 "a": pl.Series(
                     [
-                        {"value": 1, "unit": [{"nameee": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 2, "unit": [{"nameee": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 3, "unit": [{"nameee": "m", "power": {"numer": 1, "denom": 1}}]},
+                        {
+                            "value": 1,
+                            "unit": [
+                                {"nameee": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
+                        {
+                            "value": 2,
+                            "unit": [
+                                {"nameee": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
+                        {
+                            "value": 3,
+                            "unit": [
+                                {"nameee": "m", "power": {"numer": 1, "denom": 1}}
+                            ],
+                        },
                     ]
                 )
             }
@@ -82,9 +112,18 @@ class TestNoop:
             {
                 "a": pl.Series(
                     [
-                        {"value": "1", "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": "2", "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": "3", "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
+                        {
+                            "value": "1",
+                            "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}],
+                        },
+                        {
+                            "value": "2",
+                            "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}],
+                        },
+                        {
+                            "value": "3",
+                            "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}],
+                        },
                     ]
                 )
             }
@@ -99,10 +138,20 @@ class TestNoop:
             {
                 "qt": pl.Series(
                     [
-                        {"value": 1, "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 2, "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}]},
-                        {"value": 3, "unit": [{"name": "cm", "power": {"numer": 1, "denom": 1}}]}, # different unit
-                    ], dtype = plqt.QuantityDtype(pl.Int64)
+                        {
+                            "value": 1,
+                            "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}],
+                        },
+                        {
+                            "value": 2,
+                            "unit": [{"name": "m", "power": {"numer": 1, "denom": 1}}],
+                        },
+                        {
+                            "value": 3,
+                            "unit": [{"name": "cm", "power": {"numer": 1, "denom": 1}}],
+                        },  # different unit
+                    ],
+                    dtype=plqt.QuantityDtype(pl.Int64),
                 )
             }
         )
@@ -112,18 +161,27 @@ class TestNoop:
 
 
 _test_unit = [{"name": "m", "power": {"numer": 1, "denom": 1}}]
+
+
 class TestUnaryOps:
-    def _test_op(self, qt_op, polars_op, exp_unit = _test_unit):
+    def _test_op(self, qt_op, polars_op, exp_unit=_test_unit):
         """Tests that applying unit_op to a column of units is equivalent to applying polars_op to the values"""
 
-        df = pl.DataFrame({'qt': pl.Series([
-            {"value": 1, "unit": _test_unit},
-            {"value": 2, "unit": _test_unit},
-            {"value": 3, "unit": _test_unit},
-            {"value": 4, "unit": _test_unit},
-            {"value": -5, "unit": _test_unit},
-            ], dtype = plqt.QuantityDtype(pl.Int64))})
-    
+        df = pl.DataFrame(
+            {
+                "qt": pl.Series(
+                    [
+                        {"value": 1, "unit": _test_unit},
+                        {"value": 2, "unit": _test_unit},
+                        {"value": 3, "unit": _test_unit},
+                        {"value": 4, "unit": _test_unit},
+                        {"value": -5, "unit": _test_unit},
+                    ],
+                    dtype=plqt.QuantityDtype(pl.Int64),
+                )
+            }
+        )
+
         return (
             df.select(
                 qt_op=qt_op("qt"),
@@ -131,8 +189,8 @@ class TestUnaryOps:
             )
             .select(
                 equal=(
-                    (pl.col("qt_op").struct.field("value") == pl.col("polars_op")) & 
-                    (pl.col("qt_op").struct.field("unit") == exp_unit)
+                    (pl.col("qt_op").struct.field("value") == pl.col("polars_op"))
+                    & (pl.col("qt_op").struct.field("unit") == exp_unit)
                 ).all()
             )["equal"]
             .item()
@@ -151,9 +209,13 @@ class TestUnaryOps:
         assert self._test_op(plqt.mean, lambda x: x.mean())
 
     def test_pow_int(self):
-        exp_unit = pl.lit([{"name": "m", "power": {"numer": 2, "denom": 1}}], dtype=plqt.UnitDType)
+        exp_unit = pl.lit(
+            [{"name": "m", "power": {"numer": 2, "denom": 1}}], dtype=plqt.UnitDType
+        )
         assert self._test_op(lambda x: plqt.pow(x, 2), lambda x: x.pow(2), exp_unit)
 
     def test_sqrt(self):
-        exp_unit = pl.lit([{"name": "m", "power": {"numer": 1, "denom": 2}}], dtype=plqt.UnitDType)
+        exp_unit = pl.lit(
+            [{"name": "m", "power": {"numer": 1, "denom": 2}}], dtype=plqt.UnitDType
+        )
         assert self._test_op(plqt.sqrt, lambda x: x.sqrt(), exp_unit)
