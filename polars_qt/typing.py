@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union, Any
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     import sys

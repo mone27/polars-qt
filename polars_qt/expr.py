@@ -5,15 +5,23 @@ import polars_qt as plu
 import polars as pl
 from functools import partial
 
-__all__  = ["QuantityDtype", "UnitDType"]
+__all__ = ["QuantityDtype", "UnitDType"]
 
-UnitDType = pl.List(pl.Struct({"name": pl.Utf8, "power": pl.Struct({"numer": pl.Int64, "denom": pl.Int64})}))
+UnitDType = pl.List(
+    pl.Struct(
+        {"name": pl.Utf8, "power": pl.Struct({"numer": pl.Int64, "denom": pl.Int64})}
+    )
+)
+
 
 def QuantityDtype(dtype: pl.DataType) -> pl.DataType:
-    return pl.Struct({
-        "value": dtype,
-        "unit": UnitDType,
-    })
+    return pl.Struct(
+        {
+            "value": dtype,
+            "unit": UnitDType,
+        }
+    )
+
 
 @pl.api.register_expr_namespace("qt")
 class QuantityExpr:
@@ -63,10 +71,15 @@ class QuantitySeries:
         # units = [(unit[0], (1, 1)  else unit) for unit in units]
         # default denominator to 1 if not provided
         # units = [(name, (power[0], 1) if len(power)==1 else power) for name, power in units]
-        unit_series = pl.Series([[
-            {"name": name, "power": {"numer": power[0], "denom": power[1]}}
-            for name, power in units
-        ]], dtype=UnitDType)
+        unit_series = pl.Series(
+            [
+                [
+                    {"name": name, "power": {"numer": power[0], "denom": power[1]}}
+                    for name, power in units
+                ]
+            ],
+            dtype=UnitDType,
+        )
         return pl.struct(
             value=self._series,
             unit=pl.lit(unit_series),

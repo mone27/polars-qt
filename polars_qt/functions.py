@@ -52,7 +52,9 @@ if TYPE_CHECKING:
 LIB = Path(__file__).parent
 
 
-def plugin_fn(name: str, *args, is_elem=True,  kwargs: dict[str, Any] | None = None) -> pl.Expr:
+def plugin_fn(
+    name: str, *args, is_elem=True, kwargs: dict[str, Any] | None = None
+) -> pl.Expr:
     return register_plugin_function(
         args=list(args),
         plugin_path=LIB,
@@ -205,4 +207,3 @@ def pow(expr, exp: int | float) -> pl.Expr:
         return plugin_fn("pow_float", expr, kwargs={"exp": exp})
     else:
         raise ValueError("Exponenet must be int or float for quantities")
-    

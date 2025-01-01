@@ -41,6 +41,7 @@ jobs:
         with:
           environments: ${{ matrix.environment }}
       - run: pixi run build
+      - run: pixi run pre-commit
       - run: pixi run test
 
   linux:

@@ -51,9 +51,8 @@ python = "3.12.*"
 [tool.pixi.environments]
 py39 = ["py39"]
 py310 = ["py310"]
-py311 = ["py311"]   
+py311 = ["py311"]
 py312 = ["py312"]
-
 
 
 [tool.pixi.pypi-dependencies]
@@ -63,11 +62,17 @@ py312 = ["py312"]
 
 build = "maturin develop --uv"
 build-release = "maturin develop --release --uv"
-test = "pytest tests"
-render_readme = "jupyter nbconvert --to markdown README.ipynb --output README.md"
+test_py = "pytest tests"
+test_rust = "cargo test"
+test = { depends-on = ["test_py", "test_rust"] }
+render_readme = "quarto render README.ipynb --to gfm"
 pre-commit = """
 cargo fmt --all && cargo clippy --all-features &&
 ruff check . --fix --exit-non-zero-on-fix &&
 ruff format . &&
 mypy tests
 """
+
+[tool.pixi.host-dependencies]
+quarto = ">=1.5.57,<2"
+
