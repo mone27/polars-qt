@@ -33,6 +33,7 @@ rust = "*"
 uv = "*"
 gcc = "*"
 jupyterlab = "*"
+pint = ">=0.24.4,<0.25"
 
 [tool.pixi.pypi-options]
 no-build-isolation = ["polars-qt"]

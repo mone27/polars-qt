@@ -1,26 +1,11 @@
 """Add unit to Polars expressions API"""
 
 from typing import Optional
-import polars_qt as plu
+import polars_qt as pqt
 import polars as pl
 from functools import partial
+from .units import UnitDType, QtUnits
 
-__all__ = ["QuantityDtype", "UnitDType"]
-
-UnitDType = pl.List(
-    pl.Struct(
-        {"name": pl.Utf8, "power": pl.Struct({"numer": pl.Int64, "denom": pl.Int64})}
-    )
-)
-
-
-def QuantityDtype(dtype: pl.DataType) -> pl.DataType:
-    return pl.Struct(
-        {
-            "value": dtype,
-            "unit": UnitDType,
-        }
-    )
 
 
 @pl.api.register_expr_namespace("qt")
@@ -29,34 +14,34 @@ class QuantityExpr:
         self._expr = expr
 
     def __getattr__(self, name: str, *args, **kwargs) -> pl.Expr:
-        return partial(getattr(plu.functions, name), self._expr, *args, **kwargs)
+        return partial(getattr(pqt.functions, name), self._expr, *args, **kwargs)
 
     def __add__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.add(self._expr, other)
+        return pqt.functions.add(self._expr, other)
 
     def __radd__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.add(other, self._expr)
+        return pqt.functions.add(other, self._expr)
 
     def __mul__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.mul(self._expr, other)
+        return pqt.functions.mul(self._expr, other)
 
     def __rmul__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.mul(other, self._expr)
+        return pqt.functions.mul(other, self._expr)
 
     def __sub__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.sub(self._expr, other)
+        return pqt.functions.sub(self._expr, other)
 
     def __rsub__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.sub(other, self._expr)
+        return pqt.functions.sub(other, self._expr)
 
     def __truediv__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.div(self._expr, other)
+        return pqt.functions.div(self._expr, other)
 
     def __rtruediv__(self, other: pl.Expr) -> pl.Expr:
-        return plu.functions.div(other, self._expr)
+        return pqt.functions.div(other, self._expr)
 
     def __abs__(self) -> pl.Expr:
-        return plu.functions.abs(self._expr)
+        return pqt.functions.abs(self._expr)
 
 
 @pl.api.register_series_namespace("qt")
