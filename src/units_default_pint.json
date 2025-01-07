@@ -1,0 +1,489 @@
+{
+  "units": {
+    "meter": {
+      "relation": {
+        "operation": "base",
+        "left": "[length]"
+      },
+      "symbol": "m",
+      "aliases": ["metre"]
+    },
+    "second": {
+      "relation": {
+        "operation": "base",
+        "left": "[time]"
+      },
+      "symbol": "s",
+      "aliases": ["sec"]
+    },
+    "ampere": {
+      "relation": {
+        "operation": "base",
+        "left": "[current]"
+      },
+      "symbol": "A",
+      "aliases": ["amp"]
+    },
+    "candela": {
+      "relation": {
+        "operation": "base",
+        "left": "[luminosity]"
+      },
+      "symbol": "cd",
+      "aliases": ["candle"]
+    },
+    "gram": {
+      "relation": {
+        "operation": "base",
+        "left": "[mass]"
+      },
+      "symbol": "g",
+      "aliases": []
+    },
+    "mole": {
+      "relation": {
+        "operation": "base",
+        "left": "[substance]"
+      },
+      "symbol": "mol",
+      "aliases": []
+    },
+    "kelvin": {
+      "relation": {
+        "operation": "base",
+        "left": "[temperature]"
+      },
+      "symbol": "K",
+      "aliases": ["degK", "°K", "degree_Kelvin", "degreeK"]
+    },
+    "radian": {
+      "relation": {
+        "operation": "base",
+        "left": "[]"
+      },
+      "symbol": "rad",
+      "aliases": []
+    },
+    "bit": {
+      "relation": {
+        "operation": "base",
+        "left": "[]"
+      },
+      "symbol": "",
+      "aliases": []
+    },
+    "count": {
+      "relation": {
+        "operation": "base",
+        "left": "[]"
+      },
+      "symbol": "",
+      "aliases": []
+    }
+  },
+  "prefixes": {
+    "quecto-": {
+      "amount": "1e-30",
+      "symbol": "q-",
+      "aliases": []
+    },
+    "ronto-": {
+      "amount": "1e-27",
+      "symbol": "r-",
+      "aliases": []
+    },
+    "yocto-": {
+      "amount": "1e-24",
+      "symbol": "y-",
+      "aliases": []
+    },
+    "zepto-": {
+      "amount": "1e-21",
+      "symbol": "z-",
+      "aliases": []
+    },
+    "atto-": {
+      "amount": "1e-18",
+      "symbol": "a-",
+      "aliases": []
+    },
+    "femto-": {
+      "amount": "1e-15",
+      "symbol": "f-",
+      "aliases": []
+    },
+    "pico-": {
+      "amount": "1e-12",
+      "symbol": "p-",
+      "aliases": []
+    },
+    "nano-": {
+      "amount": "1e-9",
+      "symbol": "n-",
+      "aliases": []
+    },
+    "micro-": {
+      "amount": "1e-6",
+      "symbol": "µ-",
+      "aliases": ["μ-", "u-", "mu-", "mc-"]
+    },
+    "milli-": {
+      "amount": "1e-3",
+      "symbol": "m-",
+      "aliases": []
+    },
+    "centi-": {
+      "amount": "1e-2",
+      "symbol": "c-",
+      "aliases": []
+    },
+    "deci-": {
+      "amount": "1e-1",
+      "symbol": "d-",
+      "aliases": []
+    },
+    "deca-": {
+      "amount": "1e+1",
+      "symbol": "da-",
+      "aliases": ["deka-"]
+    },
+    "hecto-": {
+      "amount": "1e2",
+      "symbol": "h-",
+      "aliases": []
+    },
+    "kilo-": {
+      "amount": "1e3",
+      "symbol": "k-",
+      "aliases": []
+    },
+    "mega-": {
+      "amount": "1e6",
+      "symbol": "M-",
+      "aliases": []
+    },
+    "giga-": {
+      "amount": "1e9",
+      "symbol": "G-",
+      "aliases": []
+    },
+    "tera-": {
+      "amount": "1e12",
+      "symbol": "T-",
+      "aliases": []
+    },
+    "peta-": {
+      "amount": "1e15",
+      "symbol": "P-",
+      "aliases": []
+    },
+    "exa-": {
+      "amount": "1e18",
+      "symbol": "E-",
+      "aliases": []
+    },
+    "zetta-": {
+      "amount": "1e21",
+      "symbol": "Z-",
+      "aliases": []
+    },
+    "yotta-": {
+      "amount": "1e24",
+      "symbol": "Y-",
+      "aliases": []
+    },
+    "ronna-": {
+      "amount": "1e27",
+      "symbol": "R-",
+      "aliases": []
+    },
+    "quetta-": {
+      "amount": "1e30",
+      "symbol": "Q-",
+      "aliases": []
+    },
+    "kibi-": {
+      "amount": "2**10",
+      "symbol": "Ki-",
+      "aliases": []
+    },
+    "mebi-": {
+      "amount": "2**20",
+      "symbol": "Mi-",
+      "aliases": []
+    },
+    "gibi-": {
+      "amount": "2**30",
+      "symbol": "Gi-",
+      "aliases": []
+    },
+    "tebi-": {
+      "amount": "2**40",
+      "symbol": "Ti-",
+      "aliases": []
+    },
+    "pebi-": {
+      "amount": "2**50",
+      "symbol": "Pi-",
+      "aliases": []
+    },
+    "exbi-": {
+      "amount": "2**60",
+      "symbol": "Ei-",
+      "aliases": []
+    },
+    "zebi-": {
+      "amount": "2**70",
+      "symbol": "Zi-",
+      "aliases": []
+    },
+    "yobi-": {
+      "amount": "2**80",
+      "symbol": "Yi-",
+      "aliases": []
+    },
+    "semi-": {
+      "amount": "0.5",
+      "symbol": "_",
+      "aliases": ["demi-"]
+    },
+    "sesqui-": {
+      "amount": "1.5",
+      "symbol": "",
+      "aliases": []
+    }
+  },
+  "derived_dimensions": {
+    "area": {
+      "operation": "exponentiation",
+      "left": "[length]",
+      "exponent": 2
+    },
+    "volume": {
+      "operation": "exponentiation",
+      "left": "[length]",
+      "exponent": 3
+    },
+    "frequency": {
+      "operation": "division",
+      "left": "1",
+      "right": "[time]"
+    },
+    "wavenumber": {
+      "operation": "division",
+      "left": "1",
+      "right": "[length]"
+    },
+    "velocity": {
+      "operation": "division",
+      "left": "[length]",
+      "right": "[time]"
+    },
+    "volumetric_flow_rate": {
+      "operation": "division",
+      "left": "[volume]",
+      "right": "[time]"
+    },
+    "acceleration": {
+      "operation": "division",
+      "left": "[velocity]",
+      "right": "[time]"
+    },
+    "force": {
+      "operation": "multiplication",
+      "left": "[mass]",
+      "right": "[acceleration]"
+    },
+    "energy": {
+      "operation": "multiplication",
+      "left": "[force]",
+      "right": "[length]"
+    },
+    "power": {
+      "operation": "division",
+      "left": "[energy]",
+      "right": "[time]"
+    },
+    "momentum": {
+      "operation": "division",
+      "left": "[length] * [mass]",
+      "right": "[time]"
+    },
+    "density": {
+      "operation": "division",
+      "left": "[mass]",
+      "right": "[volume]"
+    },
+    "pressure": {
+      "operation": "division",
+      "left": "[force]",
+      "right": "[area]"
+    },
+    "torque": {
+      "operation": "multiplication",
+      "left": "[force]",
+      "right": "[length]"
+    },
+    "viscosity": {
+      "operation": "multiplication",
+      "left": "[pressure]",
+      "right": "[time]"
+    },
+    "kinematic_viscosity": {
+      "operation": "division",
+      "left": "[area]",
+      "right": "[time]"
+    },
+    "fluidity": {
+      "operation": "division",
+      "left": "1",
+      "right": "[viscosity]"
+    },
+    "concentration": {
+      "operation": "division",
+      "left": "[substance]",
+      "right": "[volume]"
+    },
+    "activity": {
+      "operation": "division",
+      "left": "[substance]",
+      "right": "[time]"
+    },
+    "entropy": {
+      "operation": "division",
+      "left": "[energy]",
+      "right": "[temperature]"
+    },
+    "molar_entropy": {
+      "operation": "division",
+      "left": "[entropy]",
+      "right": "[substance]"
+    },
+    "heat_transmission": {
+      "operation": "division",
+      "left": "[energy]",
+      "right": "[area]"
+    },
+    "luminance": {
+      "operation": "division",
+      "left": "[luminosity]",
+      "right": "[area]"
+    },
+    "luminous_flux": {
+      "operation": "base",
+      "left": "[luminosity]"
+    },
+    "illuminance": {
+      "operation": "division",
+      "left": "[luminous_flux]",
+      "right": "[area]"
+    },
+    "intensity": {
+      "operation": "division",
+      "left": "[power]",
+      "right": "[area]"
+    },
+    "charge": {
+      "operation": "multiplication",
+      "left": "[current]",
+      "right": "[time]"
+    },
+    "electric_potential": {
+      "operation": "division",
+      "left": "[energy]",
+      "right": "[charge]"
+    },
+    "electric_field": {
+      "operation": "division",
+      "left": "[electric_potential]",
+      "right": "[length]"
+    },
+    "electric_displacement_field": {
+      "operation": "division",
+      "left": "[charge]",
+      "right": "[area]"
+    },
+    "reduced_electric_field": {
+      "operation": "multiplication",
+      "left": "[electric_field]",
+      "right": "[area]"
+    },
+    "resistance": {
+      "operation": "division",
+      "left": "[electric_potential]",
+      "right": "[current]"
+    },
+    "resistivity": {
+      "operation": "multiplication",
+      "left": "[resistance]",
+      "right": "[length]"
+    },
+    "conductance": {
+      "operation": "division",
+      "left": "[current]",
+      "right": "[electric_potential]"
+    },
+    "capacitance": {
+      "operation": "division",
+      "left": "[charge]",
+      "right": "[electric_potential]"
+    },
+    "magnetic_flux": {
+      "operation": "multiplication",
+      "left": "[electric_potential]",
+      "right": "[time]"
+    },
+    "inductance": {
+      "operation": "division",
+      "left": "[magnetic_flux]",
+      "right": "[current]"
+    },
+    "magnetic_field": {
+      "operation": "division",
+      "left": "[magnetic_flux]",
+      "right": "[area]"
+    },
+    "magnetomotive_force": {
+      "operation": "base",
+      "left": "[current]"
+    },
+    "magnetic_field_strength": {
+      "operation": "division",
+      "left": "[current]",
+      "right": "[length]"
+    },
+    "electric_dipole": {
+      "operation": "multiplication",
+      "left": "[charge]",
+      "right": "[length]"
+    },
+    "electric_quadrupole": {
+      "operation": "multiplication",
+      "left": "[charge]",
+      "right": "[area]"
+    },
+    "magnetic_dipole": {
+      "operation": "multiplication",
+      "left": "[current]",
+      "right": "[area]"
+    },
+    "refractive_index": {
+      "operation": "base",
+      "left": "[]"
+    }
+  },
+  "aliases": {
+    "meter": ["metre"],
+    "second": ["sec"],
+    "ampere": ["amp"],
+    "candela": ["candle"],
+    "kelvin": ["degK", "°K", "degree_Kelvin", "degreeK"],
+    "micro-": ["μ-", "u-", "mu-", "mc-"],
+    "deca-": ["deka-"],
+    "semi-": ["demi-"]
+  },
+  "defaults": {
+    "group": "international",
+    "system": "mks"
+  }
+}
