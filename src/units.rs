@@ -2,6 +2,8 @@ use num_rational::Rational64;
 use num_traits::FromPrimitive;
 use polars::prelude::*;
 
+mod conversion;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit {
     name: std::string::String,
