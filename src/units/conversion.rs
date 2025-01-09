@@ -1,49 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use num_rational::Rational64;
 use pyo3_polars::export::polars_core::utils::rayon::vec;
-
-// struct BaseDimension{
-//     name: String
-// }
-
-
-// enum Operator{
-//     Mul,
-//     Div,
-//     Exp,
-//     Noop
-// }
-
-// enum Operand{
-//     BaseDimension(Dimension),
-//     Dimension(Dimension),
-//     Number(Rational64),
-//     None
-// }
-
-// struct Operation{
-//     operator: Operator,
-//     left: Operand,
-//     right: Operand
-// }
-
-
-// struct Dimension{
-//     // name: String, 
-//     operands: Box<Operation> // Needed Box because is recursive
-// }
-
-// struct BaseUnit{
-//     name: String,
-//     dimension: Dimension
-// }
-
-// struct Unit{
-//     name: String,
-//     dimension: Dimension,
-     
-// }
-
-
 
 // Other option
 
@@ -58,29 +16,36 @@ use pyo3_polars::export::polars_core::utils::rayon::vec;
 // another problem  to consider is how are we going to express the relationi
 // so this is a situation a single named unit can depend on multiple dimensions
 // but then you also need to combine units
-// but we need to ensure the 
-// now need to add to 
+// but we need to ensure the
+// now need to add to
 
-struct SingleDimension{
-    name: std::string::String,
+#[derive(Hash, Debug, Eq, PartialEq, Clone)]
+pub struct Dimension {
+    pub dimensions: Vec<(String, Rational64)>,
 }
 
-struct Dimension{
-    dimensions: Vec<(SingleDimension, Rational64)>
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct BaseUnit {
+    pub name: std::string::String, // e.g. meter
+    // prefix: std::string::String, // e.g. kilo
+    pub dimension: Dimension, // e.g. [length]
 }
 
-struct SingleUnit{
-    name: std::string::String,
-    dimension: Dimension
+#[derive(Debug, PartialEq, Clone)]
+pub struct Conversion {
+    pub factor: f64,
+    pub offset: Option<f64>,
+    pub unit: Unit,
 }
 
-struct conversion{
-    factor: f64,
-    unit: Unit
+#[derive(Debug, PartialEq, Clone)]
+pub struct Unit {
+    // pub units: Vec<(BaseUnit, Rational64)>,
+    pub unit: BaseUnit,
+    pub conversion: Box<Option<Conversion>>,
 }
 
-
-struct Unit{
-    units: Vec<(SingleUnit, Rational64)>,
-    conversion: Box<Option<conversion>>
+pub struct UnitRegistry {
+    pub dimensions: HashMap<String, Dimension>,
+    pub units: HashMap<String, Unit>,
 }

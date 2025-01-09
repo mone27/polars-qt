@@ -3,6 +3,7 @@ use num_traits::FromPrimitive;
 use polars::prelude::*;
 
 mod conversion;
+mod definitions;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit {

@@ -1316,6 +1316,7 @@ version = "0.1.0"
 dependencies = [
  "num-rational",
  "num-traits",
+ "once_cell",
  "polars",
  "pyo3",
  "pyo3-polars",
