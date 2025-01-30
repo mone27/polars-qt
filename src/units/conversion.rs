@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use num_rational::Rational64;
-use pyo3_polars::export::polars_core::utils::rayon::vec;
+use polars::prelude::{polars_bail, PolarsResult};
 
 // Other option
 
@@ -48,4 +48,89 @@ pub struct Unit {
 pub struct UnitRegistry {
     pub dimensions: HashMap<String, Dimension>,
     pub units: HashMap<String, Unit>,
+}
+
+impl UnitRegistry {
+    pub fn convert(old_unit: Unit, new_unit: Unit) -> PolarsResult<f64> {
+        let old_dim = &old_unit.unit.dimension;
+        let new_dim = &new_unit.unit.dimension;
+        if old_dim != new_dim {
+            polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+        }
+        let old_conv = old_unit.conversion.as_ref();
+        let new_conv = new_unit.conversion.as_ref();
+        // either
+        match (old_conv, new_conv) {
+            (Some(old_conv), Some(new_conv)) => {
+                if old_conv.unit == new_conv.unit {
+                    assert!(
+                        old_conv.offset.is_none() & new_conv.offset.is_none(),
+                        "Offset not yet supported"
+                    );
+                    let factor = old_conv.factor / new_conv.factor;
+                    Ok(factor)
+                } else {
+                    polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+                }
+            },
+            (Some(old_conv), None) => {
+                let factor = old_conv.factor;
+                assert!(old_conv.offset.is_none());
+                Ok(factor)
+            },
+            (None, Some(new_conv)) => {
+                let factor = 1.0 / new_conv.factor;
+                assert!(new_conv.offset.is_none());
+                Ok(factor)
+            },
+            (None, None) => {
+                if old_unit.unit == new_unit.unit {
+                    Ok(1.0)
+                } else {
+                    polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+                }
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::units::definitions;
+
+    #[test]
+    fn test_conversion_base() {
+        let mut registry = UnitRegistry {
+            dimensions: HashMap::new(),
+            units: HashMap::new(),
+        };
+
+        let lenght = Dimension {
+            dimensions: vec![("length".to_string(), Rational64::from_integer(1))],
+        };
+
+        let meter = Unit {
+            unit: BaseUnit {
+                name: "meter".to_string(),
+                dimension: lenght.clone(),
+            },
+            conversion: Box::new(None),
+        };
+        let kilometer = Unit {
+            unit: BaseUnit {
+                name: "kilometer".to_string(),
+                dimension: lenght.clone(),
+            },
+            conversion: Box::new(Some(Conversion {
+                factor: 1000.0,
+                offset: None,
+                unit: meter.clone(),
+            })),
+        };
+
+        let factor = UnitRegistry::convert(meter, kilometer).unwrap();
+        assert_eq!(factor, 0.001);
+    }
 }
