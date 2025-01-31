@@ -50,6 +50,97 @@ pub struct UnitRegistry {
     pub units: HashMap<String, Unit>,
 }
 
+impl Conversion {
+    pub fn new(factor: f64, unit: Unit) -> Self {
+        Self {
+            factor,
+            offset: None,
+            unit,
+        }
+    }
+}
+
+impl Mul for Unit {
+    type Output = Unit;
+
+    fn mul(self, rhs: Unit) -> Unit {
+        let new_dimension = Dimension {
+            dimensions: self
+                .unit
+                .dimension
+                .dimensions
+                .iter()
+                .chain(rhs.unit.dimension.dimensions.iter())
+                .map(|(name, exp)| (name.clone(), *exp))
+                .collect(),
+        };
+
+        let new_conversion = match (*self.conversion, *rhs.conversion) {
+            (Some(conv1), Some(conv2)) => Some(Conversion {
+                factor: conv1.factor * conv2.factor,
+                offset: None,
+                unit: conv1.unit.clone(),
+            }),
+            (Some(conv), None) | (None, Some(conv)) => Some(conv.clone()),
+            (None, None) => None,
+        };
+
+        Unit {
+            unit: BaseUnit {
+                name: format!("({} * {})", self.unit.name, rhs.unit.name),
+                dimension: new_dimension,
+            },
+            conversion: Box::new(new_conversion),
+        }
+    }
+}
+
+impl Div for Unit {
+    type Output = Unit;
+
+    fn div(self, rhs: Unit) -> Unit {
+        let new_dimension = Dimension {
+            dimensions: self
+                .unit
+                .dimension
+                .dimensions
+                .iter()
+                .chain(
+                    rhs.unit
+                        .dimension
+                        .dimensions
+                        .iter()
+                        .map(|(name, exp)| (name.clone(), -exp)),
+                )
+                .map(|(name, exp)| (name.clone(), *exp))
+                .collect(),
+        };
+
+        let new_conversion = match (*self.conversion, *rhs.conversion) {
+            (Some(conv1), Some(conv2)) => Some(Conversion {
+                factor: conv1.factor / conv2.factor,
+                offset: None,
+                unit: conv1.unit.clone(),
+            }),
+            (Some(conv), None) => Some(conv.clone()),
+            (None, Some(conv)) => Some(Conversion {
+                factor: 1.0 / conv.factor,
+                offset: None,
+                unit: conv.unit.clone(),
+            }),
+            (None, None) => None,
+        };
+
+        Unit {
+            unit: BaseUnit {
+                name: format!("({} / {})", self.unit.name, rhs.unit.name),
+                dimension: new_dimension,
+            },
+            conversion: Box::new(new_conversion),
+        }
+    }
+}
+
 impl UnitRegistry {
     pub fn convert(old_unit: Unit, new_unit: Unit) -> PolarsResult<f64> {
         let old_dim = &old_unit.unit.dimension;
