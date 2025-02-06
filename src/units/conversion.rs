@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::ops::{Div, Mul};
 
 use num_rational::Rational64;
-use polars::prelude::{polars_bail, PolarsResult};
 
 // Other option
 
@@ -26,29 +25,22 @@ pub struct Dimension {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct BaseUnit {
+pub struct SimpleUnit {
     pub name: std::string::String, // e.g. meter
-    // prefix: std::string::String, // e.g. kilo
-    pub dimension: Dimension, // e.g. [length]
+    pub dimension: Dimension,      // e.g. [length]
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Conversion {
     pub factor: f64,
     pub offset: Option<f64>,
-    pub unit: Unit,
+    pub base_unit: Unit,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Unit {
-    // pub units: Vec<(BaseUnit, Rational64)>,
-    pub unit: BaseUnit,
+    pub simple_unit: SimpleUnit,
     pub conversion: Box<Option<Conversion>>,
-}
-
-pub struct UnitRegistry {
-    pub dimensions: HashMap<String, Dimension>,
-    pub units: HashMap<String, Unit>,
 }
 
 impl Conversion {
@@ -56,12 +48,12 @@ impl Conversion {
         Self {
             factor,
             offset: None,
-            unit,
+            base_unit: unit,
         }
     }
 }
 
-impl BaseUnit {
+impl SimpleUnit {
     /// Simplify the unit by removing dimensions with a power of 0
     fn simplify(mut self) -> Self {
         self.dimension
@@ -71,10 +63,10 @@ impl BaseUnit {
     }
 }
 
-impl Mul for BaseUnit {
-    type Output = BaseUnit;
+impl Mul for SimpleUnit {
+    type Output = SimpleUnit;
 
-    fn mul(self, rhs: BaseUnit) -> BaseUnit {
+    fn mul(self, rhs: SimpleUnit) -> SimpleUnit {
         let mut dimensions = self.dimension.dimensions.clone();
         for dim_rhs in &rhs.dimension.dimensions {
             if let Some(dim) = dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
@@ -83,7 +75,7 @@ impl Mul for BaseUnit {
                 dimensions.push(dim_rhs.clone());
             }
         }
-        let unit = BaseUnit {
+        let unit = SimpleUnit {
             name: format!("{} * {}", self.name, rhs.name),
             dimension: Dimension { dimensions },
         };
@@ -99,38 +91,38 @@ impl Mul for Unit {
             (Some(conv1), Some(conv2)) => Some(Conversion {
                 factor: conv1.factor * conv2.factor,
                 offset: None,
-                unit: conv1.unit * conv2.unit,
+                base_unit: conv1.base_unit * conv2.base_unit,
             }),
             (Some(conv), None) => Some(Conversion {
                 factor: conv.factor,
                 offset: None,
-                unit: conv.unit
+                base_unit: conv.base_unit
                     * Unit {
-                        unit: rhs.unit.clone(),
+                        simple_unit: rhs.simple_unit.clone(),
                         conversion: Box::new(None),
                     },
             }),
             (None, Some(conv)) => Some(Conversion {
                 factor: conv.factor,
                 offset: None,
-                unit: Unit {
-                    unit: self.unit.clone(),
+                base_unit: Unit {
+                    simple_unit: self.simple_unit.clone(),
                     conversion: Box::new(None),
-                } * conv.unit,
+                } * conv.base_unit,
             }),
             (None, None) => None,
         };
 
         Unit {
-            unit: self.unit * rhs.unit,
+            simple_unit: self.simple_unit * rhs.simple_unit,
             conversion: Box::new(new_conversion),
         }
     }
 }
-impl Div for BaseUnit {
-    type Output = BaseUnit;
+impl Div for SimpleUnit {
+    type Output = SimpleUnit;
 
-    fn div(self, rhs: BaseUnit) -> BaseUnit {
+    fn div(self, rhs: SimpleUnit) -> SimpleUnit {
         let mut dimensions = self.dimension.dimensions.clone();
         for dim_rhs in &rhs.dimension.dimensions {
             if let Some(dim) = dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
@@ -139,7 +131,7 @@ impl Div for BaseUnit {
                 dimensions.push((dim_rhs.0.clone(), -dim_rhs.1));
             }
         }
-        let unit = BaseUnit {
+        let unit = SimpleUnit {
             name: format!("{} / {}", self.name, rhs.name),
             dimension: Dimension { dimensions },
         };
@@ -155,37 +147,115 @@ impl Div for Unit {
             (Some(conv1), Some(conv2)) => Some(Conversion {
                 factor: conv1.factor / conv2.factor,
                 offset: None,
-                unit: conv1.unit / conv2.unit,
+                base_unit: conv1.base_unit / conv2.base_unit,
             }),
             (Some(conv), None) => Some(conv.clone()),
             (None, Some(conv)) => Some(Conversion {
                 factor: 1.0 / conv.factor,
                 offset: None,
-                unit: conv.unit,
+                base_unit: conv.base_unit,
             }),
             (None, None) => None,
         };
 
         Unit {
-            unit: self.unit / rhs.unit,
+            simple_unit: self.simple_unit / rhs.simple_unit,
             conversion: Box::new(new_conversion),
         }
     }
 }
 
+pub struct UnitRegistry {
+    pub dimensions: HashMap<String, Dimension>,
+    pub units: HashMap<String, Unit>,
+}
 impl UnitRegistry {
-    pub fn convert(old_unit: Unit, new_unit: Unit) -> PolarsResult<f64> {
-        let old_dim = &old_unit.unit.dimension;
-        let new_dim = &new_unit.unit.dimension;
+    pub fn new() -> Self {
+        Self {
+            dimensions: HashMap::new(),
+            units: HashMap::new(),
+        }
+    }
+
+    pub fn get_dimension(&self, name: &str) -> Result<Dimension, String> {
+        self.dimensions
+            .get(name)
+            .cloned()
+            .ok_or(format!("dimension {} not found", name))
+    }
+
+    pub fn get_unit(&self, name: &str) -> Result<Unit, String> {
+        self.units.get(name).cloned().ok_or(format!("unit {} not found", name))
+    }
+
+    pub fn try_get_dimension(&self, name: &str) -> Dimension {
+        self.get_dimension(name).unwrap()
+    }
+
+    pub fn try_get_unit(&self, name: &str) -> Unit {
+        self.get_unit(name).unwrap()
+    }
+
+    pub fn add_unit(&mut self, unit: Unit) {
+        self.units.insert(unit.simple_unit.name.clone(), unit);
+    }
+
+    pub fn add_unit_simple(&mut self, name: &str, dimension: &str) {
+        let unit = Unit {
+            simple_unit: SimpleUnit {
+                name: name.to_string(),
+                dimension: self.try_get_dimension(dimension),
+            },
+            conversion: Box::new(None),
+        };
+        self.add_unit(unit);
+    }
+
+    pub fn add_unit_deriv(&mut self, name: &str, dimension: &str, conv_factor: f64, conv_base_name: &str) {
+        self.add_unit_deriv_offset(name, dimension, conv_factor, None, conv_base_name);
+    }
+
+    pub fn add_unit_deriv_offset(
+        &mut self,
+        name: &str,
+        dimension: &str,
+        conv_factor: f64,
+        conv_offset: Option<f64>,
+        conv_base_name: &str,
+    ) {
+        let unit = Unit {
+            simple_unit: SimpleUnit {
+                name: name.to_string(),
+                dimension: self.try_get_dimension(dimension),
+            },
+            conversion: Box::new(Some(Conversion {
+                factor: conv_factor,
+                offset: conv_offset,
+                base_unit: self.try_get_unit(conv_base_name),
+            })),
+        };
+        self.add_unit(unit);
+    }
+
+    pub fn add_dimension(&mut self, dimension: Dimension) {
+        self.dimensions.insert(dimension.dimensions[0].0.clone(), dimension);
+    }
+
+    pub fn add_dimension_simple(&mut self, name: &str) {
+        let dimension = Dimension::new_simple(name);
+        self.add_dimension(dimension);
+    }
+    pub fn convert_units(old_unit: Unit, new_unit: Unit) -> Result<f64, String> {
+        let old_dim = &old_unit.simple_unit.dimension;
+        let new_dim = &new_unit.simple_unit.dimension;
         if old_dim != new_dim {
-            polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+            return Err("Cannot convert between units with different dimensions".to_string());
         }
         let old_conv = old_unit.conversion.as_ref();
         let new_conv = new_unit.conversion.as_ref();
-        // either
         match (old_conv, new_conv) {
             (Some(old_conv), Some(new_conv)) => {
-                if old_conv.unit == new_conv.unit {
+                if old_conv.base_unit == new_conv.base_unit {
                     assert!(
                         old_conv.offset.is_none() & new_conv.offset.is_none(),
                         "Offset not yet supported"
@@ -193,7 +263,7 @@ impl UnitRegistry {
                     let factor = old_conv.factor / new_conv.factor;
                     Ok(factor)
                 } else {
-                    polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+                    return Err("Cannot convert between units with different dimensions".to_string());
                 }
             },
             (Some(old_conv), None) => {
@@ -207,12 +277,26 @@ impl UnitRegistry {
                 Ok(factor)
             },
             (None, None) => {
-                if old_unit.unit == new_unit.unit {
+                if old_unit.simple_unit == new_unit.simple_unit {
                     Ok(1.0)
                 } else {
-                    polars_bail!(ComputeError: "Cannot convert between units with different dimensions")
+                    return Err("Cannot convert between units with different dimensions".to_string());
                 }
             },
+        }
+    }
+
+    pub fn convert(&self, unit_from: String, unit_to: String) -> Result<f64, String> {
+        let unit_from = self.units.get(&unit_from).unwrap();
+        let unit_to = self.units.get(&unit_to).unwrap();
+        Self::convert_units(unit_from.clone(), unit_to.clone())
+    }
+}
+
+impl Dimension {
+    pub fn new_simple(name: &str) -> Self {
+        Self {
+            dimensions: vec![(name.to_string(), Rational64::from_integer(1))],
         }
     }
 }
@@ -228,7 +312,7 @@ mod tests {
         };
 
         let meter = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "meter".to_string(),
                 dimension: length.clone(),
             },
@@ -236,26 +320,26 @@ mod tests {
         };
 
         let kilometer = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "kilometer".to_string(),
                 dimension: length.clone(),
             },
             conversion: Box::new(Some(Conversion {
                 factor: 1000.0,
                 offset: None,
-                unit: meter.clone(),
+                base_unit: meter.clone(),
             })),
         };
 
         let centimeter = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "centimeter".to_string(),
                 dimension: length.clone(),
             },
             conversion: Box::new(Some(Conversion {
                 factor: 0.01,
                 offset: None,
-                unit: meter.clone(),
+                base_unit: meter.clone(),
             })),
         };
 
@@ -269,10 +353,10 @@ mod tests {
         let result = meter.clone() * meter.clone();
 
         assert_eq!(
-            result.unit.dimension.dimensions[0].1,
+            result.simple_unit.dimension.dimensions[0].1,
             Rational64::from_integer(2)
         );
-        assert_eq!(result.unit.name, "meter * meter");
+        assert_eq!(result.simple_unit.name, "meter * meter");
     }
 
     #[test]
@@ -284,7 +368,7 @@ mod tests {
         assert!(result.conversion.is_some());
         if let Some(conv) = *result.conversion {
             assert_eq!(conv.factor, 1_000_000.0);
-            assert_eq!(conv.unit, m2)
+            assert_eq!(conv.base_unit, m2)
         }
     }
 
@@ -297,7 +381,7 @@ mod tests {
         assert!(result.conversion.is_some());
         if let Some(conv) = *result.conversion {
             assert_eq!(conv.factor, 1_000.0);
-            assert_eq!(conv.unit, m2)
+            assert_eq!(conv.base_unit, m2)
         }
     }
 
@@ -307,7 +391,7 @@ mod tests {
         let (meter, _, _) = setup_length_units();
         let result = meter.clone() / meter.clone();
 
-        assert!(result.unit.dimension.dimensions.is_empty());
+        assert!(result.simple_unit.dimension.dimensions.is_empty());
     }
 
     #[test]
@@ -319,7 +403,7 @@ mod tests {
         assert!(result.conversion.is_some());
         if let Some(conv) = *result.conversion {
             assert_eq!(conv.factor, 1.0);
-            assert_eq!(conv.unit, m_m)
+            assert_eq!(conv.base_unit, m_m)
         }
     }
 
@@ -338,28 +422,28 @@ mod tests {
     #[test]
     fn test_conversion_same_unit() {
         let (meter, _, _) = setup_length_units();
-        let factor = UnitRegistry::convert(meter.clone(), meter.clone()).unwrap();
+        let factor = UnitRegistry::convert_units(meter.clone(), meter.clone()).unwrap();
         assert_eq!(factor, 1.0);
     }
 
     #[test]
     fn test_conversion_to_larger_unit() {
         let (meter, kilometer, _) = setup_length_units();
-        let factor = UnitRegistry::convert(meter, kilometer).unwrap();
+        let factor = UnitRegistry::convert_units(meter, kilometer).unwrap();
         assert_eq!(factor, 0.001);
     }
 
     #[test]
     fn test_conversion_to_smaller_unit() {
         let (meter, _, centimeter) = setup_length_units();
-        let factor = UnitRegistry::convert(meter, centimeter).unwrap();
+        let factor = UnitRegistry::convert_units(meter, centimeter).unwrap();
         assert_eq!(factor, 100.0);
     }
 
     #[test]
     fn test_conversion_between_derived_units() {
         let (meter, kilometer, centimeter) = setup_length_units();
-        let factor = UnitRegistry::convert(kilometer, centimeter).unwrap();
+        let factor = UnitRegistry::convert_units(kilometer, centimeter).unwrap();
         assert_eq!(factor, 100_000.0);
     }
 
@@ -372,14 +456,14 @@ mod tests {
         };
 
         let kilogram = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "kilogram".to_string(),
                 dimension: mass,
             },
             conversion: Box::new(None),
         };
 
-        UnitRegistry::convert(meter, kilogram).unwrap();
+        UnitRegistry::convert_units(meter, kilogram).unwrap();
     }
 
     #[test]
@@ -390,7 +474,7 @@ mod tests {
         };
 
         let base_meter = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "meter".to_string(),
                 dimension: length.clone(),
             },
@@ -398,18 +482,18 @@ mod tests {
         };
 
         let meter_with_offset = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "meter".to_string(),
                 dimension: length.clone(),
             },
             conversion: Box::new(Some(Conversion {
                 factor: 1.0,
                 offset: Some(10.0),
-                unit: base_meter.clone(),
+                base_unit: base_meter.clone(),
             })),
         };
 
-        let _ = UnitRegistry::convert(meter_with_offset.clone(), meter_with_offset.clone());
+        let _ = UnitRegistry::convert_units(meter_with_offset.clone(), meter_with_offset.clone());
     }
     // Additional edge cases and complex scenarios
     #[test]
@@ -422,7 +506,7 @@ mod tests {
         };
 
         let unit1 = Unit {
-            unit: BaseUnit {
+            simple_unit: SimpleUnit {
                 name: "unit1".to_string(),
                 dimension: dim.clone(),
             },
@@ -431,11 +515,11 @@ mod tests {
 
         let result = unit1.clone() * unit1.clone();
         assert_eq!(
-            result.unit.dimension.dimensions[0].1,
+            result.simple_unit.dimension.dimensions[0].1,
             Rational64::from_integer(2)
         );
         assert_eq!(
-            result.unit.dimension.dimensions[1].1,
+            result.simple_unit.dimension.dimensions[1].1,
             Rational64::from_integer(-4)
         );
     }
