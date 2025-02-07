@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ops::{Div, Mul};
 
+use anyhow::{anyhow, bail, Context, Result};
 use num_rational::Rational64;
 
 // Other option
@@ -177,15 +178,18 @@ impl UnitRegistry {
         }
     }
 
-    pub fn get_dimension(&self, name: &str) -> Result<Dimension, String> {
+    pub fn get_dimension(&self, name: &str) -> Result<Dimension> {
         self.dimensions
             .get(name)
             .cloned()
-            .ok_or(format!("dimension {} not found", name))
+            .context(format!("dimension {} not found", name))
     }
 
-    pub fn get_unit(&self, name: &str) -> Result<Unit, String> {
-        self.units.get(name).cloned().ok_or(format!("unit {} not found", name))
+    pub fn get_unit(&self, name: &str) -> Result<Unit> {
+        self.units
+            .get(name)
+            .cloned()
+            .context(format!("unit {} not found", name))
     }
 
     pub fn try_get_dimension(&self, name: &str) -> Dimension {
@@ -245,11 +249,15 @@ impl UnitRegistry {
         let dimension = Dimension::new_simple(name);
         self.add_dimension(dimension);
     }
-    pub fn convert_units(old_unit: Unit, new_unit: Unit) -> Result<f64, String> {
+    pub fn convert_units(old_unit: Unit, new_unit: Unit) -> Result<f64> {
         let old_dim = &old_unit.simple_unit.dimension;
         let new_dim = &new_unit.simple_unit.dimension;
         if old_dim != new_dim {
-            return Err("Cannot convert between units with different dimensions".to_string());
+            bail!(
+                "Cannot convert between units with different dimensions, got {:?} and {:?}",
+                old_dim,
+                new_dim
+            );
         }
         let old_conv = old_unit.conversion.as_ref();
         let new_conv = new_unit.conversion.as_ref();
@@ -263,7 +271,7 @@ impl UnitRegistry {
                     let factor = old_conv.factor / new_conv.factor;
                     Ok(factor)
                 } else {
-                    return Err("Cannot convert between units with different dimensions".to_string());
+                    bail!("Cannot convert between units with different dimensions");
                 }
             },
             (Some(old_conv), None) => {
@@ -280,13 +288,17 @@ impl UnitRegistry {
                 if old_unit.simple_unit == new_unit.simple_unit {
                     Ok(1.0)
                 } else {
-                    return Err("Cannot convert between units with different dimensions".to_string());
+                    Err(anyhow!(
+                        "Cannot convert between units with different dimensions, got {:?} {:?}",
+                        old_unit.simple_unit,
+                        new_unit.simple_unit
+                    ))
                 }
             },
         }
     }
 
-    pub fn convert(&self, unit_from: String, unit_to: String) -> Result<f64, String> {
+    pub fn convert(&self, unit_from: String, unit_to: String) -> Result<f64> {
         let unit_from = self.units.get(&unit_from).unwrap();
         let unit_to = self.units.get(&unit_to).unwrap();
         Self::convert_units(unit_from.clone(), unit_to.clone())
@@ -442,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_conversion_between_derived_units() {
-        let (meter, kilometer, centimeter) = setup_length_units();
+        let (_meter, kilometer, centimeter) = setup_length_units();
         let factor = UnitRegistry::convert_units(kilometer, centimeter).unwrap();
         assert_eq!(factor, 100_000.0);
     }
