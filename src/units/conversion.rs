@@ -166,17 +166,23 @@ impl Div for Unit {
     }
 }
 
-impl SimpleUnit {
+impl Dimension {
     pub fn pow(&self, exp: i64) -> Self {
-        let mut new_dimensions = self.dimension.dimensions.clone();
+        let mut new_dimensions = self.dimensions.clone();
         for dim in &mut new_dimensions {
             dim.1 *= Rational64::from_integer(exp);
         }
+        Self {
+            dimensions: new_dimensions,
+        }
+    }
+}
+
+impl SimpleUnit {
+    pub fn pow(&self, exp: i64) -> Self {
         SimpleUnit {
             name: format!("{}^{}", self.name, exp),
-            dimension: Dimension {
-                dimensions: new_dimensions,
-            },
+            dimension: self.dimension.pow(exp),
         }
     }
 }
@@ -283,13 +289,13 @@ impl UnitRegistry {
         self.add_unit(unit);
     }
 
-    pub fn add_dimension(&mut self, dimension: Dimension) {
-        self.dimensions.insert(dimension.dimensions[0].0.clone(), dimension);
+    pub fn add_dimension(&mut self, name: &str, dimension: Dimension) {
+        self.dimensions.insert(name.to_string(), dimension);
     }
 
     pub fn add_dimension_simple(&mut self, name: &str) {
         let dimension = Dimension::new_simple(name);
-        self.add_dimension(dimension);
+        self.add_dimension(name, dimension);
     }
     pub fn convert_units(old_unit: Unit, new_unit: Unit) -> Result<f64> {
         let old_dim = &old_unit.simple_unit.dimension;

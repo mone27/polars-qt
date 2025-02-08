@@ -3,6 +3,15 @@ use once_cell::sync::Lazy;
 use super::conversion::*;
 
 impl UnitRegistry {
+    fn new_with_definitions() -> Self {
+        let mut registry = UnitRegistry::new();
+        registry.add_base_dimensions();
+        registry.add_base();
+        registry.add_volume_units();
+        registry.add_derived();
+        registry
+    }
+
     fn add_base_dimensions(&mut self) {
         self.add_dimension_simple("length");
         self.add_dimension_simple("mass");
@@ -25,6 +34,17 @@ impl UnitRegistry {
         self.add_unit_simple("radian", "dimensionless");
         self.add_unit_simple("bit", "dimensionless");
         self.add_unit_simple("count", "dimensionless");
+    }
+
+    fn add_volume_units(&mut self) {
+        // Define m3 unit and volume dimension
+        self.add_unit(self.try_get_unit("meter").pow(3));
+        self.add_dimension("volume", self.try_get_dimension("length").pow(3));
+
+        self.add_unit_deriv("liter", "volume", 1e-3, "meter^3");
+        self.add_unit_deriv("cubic_centimeter", "volume", 1e-6, "meter^3");
+        self.add_unit_deriv("lambda", "volume", 1e-9, "meter^3");
+        self.add_unit_deriv("stere", "volume", 1.0, "meter^3");
     }
 
     fn add_derived(&mut self) {
@@ -59,9 +79,9 @@ impl UnitRegistry {
         );
         self.add_unit_deriv("baud", "dimensionless", 1.0, "bit");
         self.add_unit_deriv("byte", "dimensionless", 8.0, "bit");
-        self.add_unit_deriv("percent", "dimensionless", 0.01, "dimensionless");
-        self.add_unit_deriv("permille", "dimensionless", 0.001, "dimensionless");
-        self.add_unit_deriv("ppm", "dimensionless", 1e-6, "dimensionless");
+        self.add_unit_deriv("percent", "dimensionless", 0.01, "count");
+        self.add_unit_deriv("permille", "dimensionless", 0.001, "count");
+        self.add_unit_deriv("ppm", "dimensionless", 1e-6, "count");
         self.add_unit_deriv("angstrom", "length", 1e-10, "meter");
         self.add_unit_deriv("micron", "length", 1e-6, "meter");
         self.add_unit_deriv("fermi", "length", 1e-15, "meter");
@@ -74,4 +94,14 @@ impl UnitRegistry {
     }
 }
 
-pub static REGISTRY: Lazy<UnitRegistry> = Lazy::new(|| UnitRegistry::new());
+pub static REGISTRY: Lazy<UnitRegistry> = Lazy::new(|| UnitRegistry::new_with_definitions());
+
+#[cfg(test)]
+mod test {
+    use super::REGISTRY;
+
+    #[test]
+    fn test_new_definitions() {
+        assert_eq!(REGISTRY.try_get_unit("meter").simple_unit.name, "meter");
+    }
+}
