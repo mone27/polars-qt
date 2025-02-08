@@ -166,6 +166,48 @@ impl Div for Unit {
     }
 }
 
+impl SimpleUnit {
+    pub fn pow(&self, exp: i64) -> Self {
+        let mut new_dimensions = self.dimension.dimensions.clone();
+        for dim in &mut new_dimensions {
+            dim.1 *= Rational64::from_integer(exp);
+        }
+        SimpleUnit {
+            name: format!("{}^{}", self.name, exp),
+            dimension: Dimension {
+                dimensions: new_dimensions,
+            },
+        }
+    }
+}
+
+impl Unit {
+    pub fn with_name(&self, name: &str) -> Self {
+        Self {
+            simple_unit: SimpleUnit {
+                name: name.to_string(),
+                dimension: self.simple_unit.dimension.clone(),
+            },
+            conversion: self.conversion.clone(),
+        }
+    }
+
+    pub fn pow(&self, exp: i64) -> Self {
+        let new_conversion = match *self.conversion {
+            Some(ref conv) => Some(Conversion {
+                factor: conv.factor.powi(exp as i32),
+                offset: None,
+                base_unit: conv.base_unit.clone().pow(exp),
+            }),
+            None => None,
+        };
+        Self {
+            simple_unit: self.simple_unit.pow(exp),
+            conversion: Box::new(new_conversion),
+        }
+    }
+}
+
 pub struct UnitRegistry {
     pub dimensions: HashMap<String, Dimension>,
     pub units: HashMap<String, Unit>,
@@ -428,6 +470,30 @@ mod tests {
         if let Some(conv) = *result.conversion {
             assert_eq!(conv.factor, 1000.0);
         }
+    }
+
+    #[test]
+    fn test_unit_pow_positive_integer() {
+        let (meter, _, _) = setup_length_units();
+        let result = meter.clone().pow(3);
+
+        assert_eq!(
+            result.simple_unit.dimension.dimensions[0].1,
+            Rational64::from_integer(3)
+        );
+        assert_eq!(result.simple_unit.name, "meter^3");
+    }
+
+    #[test]
+    fn test_unit_pow_negative() {
+        let (meter, _, _) = setup_length_units();
+        let result = meter.clone().pow(-3);
+
+        assert_eq!(
+            result.simple_unit.dimension.dimensions[0].1,
+            Rational64::from_integer(-3)
+        );
+        assert_eq!(result.simple_unit.name, "meter^-3");
     }
 
     // Tests for Unit Conversion
