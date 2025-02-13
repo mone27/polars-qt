@@ -870,4 +870,9 @@ mod test {
     fn test_new_definitions() {
         assert_eq!(REGISTRY.try_get_unit("meter").simple_unit.name, "meter");
     }
+
+    #[test]
+    fn test_meter_to_foot() {
+        println!("{:?}", REGISTRY.try_get_unit("foot"));
+    }
 }

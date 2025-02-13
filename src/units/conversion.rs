@@ -45,6 +45,7 @@ pub struct Unit {
 }
 
 impl Conversion {
+    #[allow(dead_code)]
     pub fn new(factor: f64, unit: Unit) -> Self {
         Self {
             factor,

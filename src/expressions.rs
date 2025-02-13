@@ -8,6 +8,7 @@ use pyo3_polars::derive::polars_expr;
 use serde::Deserialize;
 
 use crate::expressions::polars_plan::prelude::Expr;
+use crate::units::definitions::REGISTRY;
 use crate::units::*;
 
 #[allow(clippy::get_first)]
@@ -16,10 +17,7 @@ fn check_valid_quantity_dtype(dtype: &DataType) -> PolarsResult<bool> {
         DataType::Struct(fields) => {
             if let (Some(value_field), Some(unit_field)) = (fields.get(0), fields.get(1)) {
                 Units::check_valid_unit_dtype(&unit_field.dtype)?;
-                if value_field.name == "value"
-                    && value_field.dtype.is_numeric()
-                    && unit_field.name == "unit"
-                {
+                if value_field.name == "value" && value_field.dtype.is_numeric() && unit_field.name == "unit" {
                     Ok(true)
                 } else {
                     polars_bail!(InvalidOperation: "Invalid Quantity. Expected struct with fields 'value' and 'unit' and types numeric and Unit, got {:?}", fields)
@@ -68,10 +66,7 @@ fn extract_quantity(input: &Series) -> PolarsResult<(Series, Series)> {
     let ca = input.struct_()?;
     check_valid_quantity_dtype(ca.dtype())?;
     let fields = &ca.fields_as_series();
-    let (value, unit) = (
-        fields.get(0).unwrap().clone(),
-        fields.get(1).unwrap().clone(),
-    );
+    let (value, unit) = (fields.get(0).unwrap().clone(), fields.get(1).unwrap().clone());
     check_same_unit(unit.list()?)?;
 
     Ok((value, unit))
@@ -99,11 +94,7 @@ fn get_new_unit(
     unit_tfms: Option<fn(Units, Units) -> Units>,
 ) -> PolarsResult<Scalar> {
     Ok(if let Some(tfms) = unit_tfms {
-        tfms(
-            Units::from_scalar(unit_left)?,
-            Units::from_scalar(unit_right)?,
-        )
-        .to_scalar()?
+        tfms(Units::from_scalar(unit_left)?, Units::from_scalar(unit_right)?).to_scalar()?
     } else if unit_left == unit_right {
         polars_bail!(InvalidOperation: "Expected units to be the same, got {:?} and {:?}", unit_left, unit_right)
     } else {
@@ -123,9 +114,6 @@ where
     } else {
         unit.first()
     };
-    println!("input: {:?}", input);
-    println!("result: {:?}", result);
-    println!("unit: {:?}", unit);
     add_unit(result, new_unit)
 }
 
@@ -270,6 +258,26 @@ create_unit_unary_expr!(std, 1);
 create_unit_unary_expr!(var, 1);
 create_unit_unary_expr!(sum);
 
+#[derive(Deserialize)]
+struct ConvertKwarg {
+    to: String,
+}
+
+#[polars_expr(output_type_func=quantity_output)]
+fn convert(inputs: &[Series], kwargs: ConvertKwarg) -> PolarsResult<Series> {
+    let (value, unit) = extract_quantity(&inputs[0])?;
+    let from_name = Units::from_scalar(unit.first())?.units[0].name.clone();
+    // TODO: support conversion from derive units, like m/s
+    // verbose error handling...
+    let conv_factor = match REGISTRY.convert(from_name, kwargs.to.clone()) {
+        Ok(factor) => Ok(factor),
+        Err(error) => Err(PolarsError::ComputeError(format!("{}", error).into())),
+    }?;
+    let value = value * conv_factor;
+    let new_unit = Units::new_simple(&kwargs.to).to_scalar()?;
+    add_unit(value, new_unit)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -313,12 +321,7 @@ mod test {
 
         assert_eq!(s.dtype(), &quantity_dtype);
 
-        let s_pow = apply_unary(
-            &s,
-            col("value").pow(2).alias("result"),
-            Some(|u: Units| u.pow_int(2)),
-        )
-        .unwrap();
+        let s_pow = apply_unary(&s, col("value").pow(2).alias("result"), Some(|u: Units| u.pow_int(2))).unwrap();
 
         let expected_unit = df!(
             "name" => &["m", "m", "m"],

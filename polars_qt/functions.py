@@ -200,10 +200,14 @@ def sum(expr: IntoExprColumn) -> pl.Expr:
     return plugin_fn("sum", expr, is_elem=False)
 
 
-def pow(expr, exp: int | float) -> pl.Expr:
+def pow(expr: IntoExprColumn, exp: int | float) -> pl.Expr:
     if isinstance(exp, int):
         return plugin_fn("pow_int", expr, kwargs={"exp": exp})
     elif isinstance(exp, float):
         return plugin_fn("pow_float", expr, kwargs={"exp": exp})
     else:
         raise ValueError("Exponenet must be int or float for quantities")
+
+
+def convert(expr: IntoExprColumn, to: str) -> pl.Expr:
+    return plugin_fn("convert", expr, kwargs={"to": to})

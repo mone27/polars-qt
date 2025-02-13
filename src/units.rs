@@ -3,20 +3,28 @@ use num_traits::FromPrimitive;
 use polars::prelude::*;
 
 mod conversion;
-mod definitions;
+pub mod definitions;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unit {
-    name: std::string::String,
-    power: Rational64,
+    pub name: std::string::String,
+    pub power: Rational64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Units {
-    units: Vec<Unit>,
+    pub units: Vec<Unit>,
 }
 
 impl Units {
+    pub fn new_simple(name: &str) -> Self {
+        Units {
+            units: vec![Unit {
+                name: name.to_string(),
+                power: Rational64::from_integer(1),
+            }],
+        }
+    }
     pub fn from_scalar(scalar: Scalar) -> PolarsResult<Self> {
         if scalar.is_null() {
             polars_bail!(ComputeError: "Unit is Null");
@@ -85,21 +93,13 @@ impl Units {
         let powers = StructChunked::from_series(
             "power".into(),
             self.units.len(),
-            [
-                numers.with_name("numer".into()),
-                denoms.with_name("denom".into()),
-            ]
-            .iter(),
+            [numers.with_name("numer".into()), denoms.with_name("denom".into())].iter(),
         )?
         .into_series();
         let ca_struct = StructChunked::from_series(
             "unit".into(),
             names.len(),
-            [
-                names.with_name("name".into()),
-                powers.with_name("power".into()),
-            ]
-            .iter(),
+            [names.with_name("name".into()), powers.with_name("power".into())].iter(),
         )?;
         Ok(Scalar::new(
             DataType::List(Box::new(DataType::Struct(vec![
