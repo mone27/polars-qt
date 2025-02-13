@@ -68,17 +68,9 @@ impl Mul for SimpleUnit {
     type Output = SimpleUnit;
 
     fn mul(self, rhs: SimpleUnit) -> SimpleUnit {
-        let mut dimensions = self.dimension.dimensions.clone();
-        for dim_rhs in &rhs.dimension.dimensions {
-            if let Some(dim) = dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
-                dim.1 += dim_rhs.1;
-            } else {
-                dimensions.push(dim_rhs.clone());
-            }
-        }
         let unit = SimpleUnit {
-            name: format!("{} * {}", self.name, rhs.name),
-            dimension: Dimension { dimensions },
+            name: format!("{}*{}", self.name, rhs.name),
+            dimension: self.dimension * rhs.dimension,
         };
         unit.simplify()
     }
@@ -124,17 +116,9 @@ impl Div for SimpleUnit {
     type Output = SimpleUnit;
 
     fn div(self, rhs: SimpleUnit) -> SimpleUnit {
-        let mut dimensions = self.dimension.dimensions.clone();
-        for dim_rhs in &rhs.dimension.dimensions {
-            if let Some(dim) = dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
-                dim.1 -= dim_rhs.1;
-            } else {
-                dimensions.push((dim_rhs.0.clone(), -dim_rhs.1));
-            }
-        }
         let unit = SimpleUnit {
-            name: format!("{} / {}", self.name, rhs.name),
-            dimension: Dimension { dimensions },
+            name: format!("{}/{}", self.name, rhs.name),
+            dimension: self.dimension / rhs.dimension,
         };
         unit.simplify()
     }
@@ -162,6 +146,42 @@ impl Div for Unit {
         Unit {
             simple_unit: self.simple_unit / rhs.simple_unit,
             conversion: Box::new(new_conversion),
+        }
+    }
+}
+
+impl Mul for Dimension {
+    type Output = Dimension;
+
+    fn mul(self, rhs: Dimension) -> Dimension {
+        let mut new_dimensions = self.dimensions.clone();
+        for dim_rhs in &rhs.dimensions {
+            if let Some(dim) = new_dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
+                dim.1 += dim_rhs.1;
+            } else {
+                new_dimensions.push(dim_rhs.clone());
+            }
+        }
+        Dimension {
+            dimensions: new_dimensions,
+        }
+    }
+}
+
+impl Div for Dimension {
+    type Output = Dimension;
+
+    fn div(self, rhs: Dimension) -> Dimension {
+        let mut new_dimensions = self.dimensions.clone();
+        for dim_rhs in &rhs.dimensions {
+            if let Some(dim) = new_dimensions.iter_mut().find(|u| u.0 == dim_rhs.0) {
+                dim.1 -= dim_rhs.1;
+            } else {
+                new_dimensions.push((dim_rhs.0.clone(), -dim_rhs.1));
+            }
+        }
+        Dimension {
+            dimensions: new_dimensions,
         }
     }
 }
@@ -416,7 +436,7 @@ mod tests {
             result.simple_unit.dimension.dimensions[0].1,
             Rational64::from_integer(2)
         );
-        assert_eq!(result.simple_unit.name, "meter * meter");
+        assert_eq!(result.simple_unit.name, "meter*meter");
     }
 
     #[test]
