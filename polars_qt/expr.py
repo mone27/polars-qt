@@ -4,8 +4,7 @@ from typing import Optional
 import polars_qt as pqt
 import polars as pl
 from functools import partial
-from .units import UnitDType, QtUnits
-
+from .units import UnitDType
 
 
 @pl.api.register_expr_namespace("qt")

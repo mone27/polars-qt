@@ -69,11 +69,10 @@ test = { depends-on = ["test_py", "test_rust"] }
 render_readme = "quarto render README.ipynb --to gfm"
 pre-commit = """
 cargo fmt --all && cargo clippy --all-features &&
-ruff check . --fix --exit-non-zero-on-fix &&
+ruff check . --fix --exit-non-zero-on-fix --exclude playground.ipynb &&
 ruff format . &&
 mypy tests
 """
 
 [tool.pixi.host-dependencies]
 quarto = ">=1.5.57,<2"
-

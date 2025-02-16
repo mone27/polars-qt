@@ -14,7 +14,11 @@ class TestQtUnits:
         unit = QtUnit(name="meter", power=Fraction(3, 4))
         lit_expr = QtUnits([unit]).as_lit()
         series_from_lit = pl.DataFrame().select(a=lit_expr)["a"]
-        expected_series = pl.Series("a", [[{"name": "meter", "power": {"numer": 3, "denom": 4}}]], dtype=UnitDType)
+        expected_series = pl.Series(
+            "a",
+            [[{"name": "meter", "power": {"numer": 3, "denom": 4}}]],
+            dtype=UnitDType,
+        )
         assert (series_from_lit == expected_series).all()
 
     def test_qtunits_initialization(self):

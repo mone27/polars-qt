@@ -4,7 +4,6 @@ Base classes to handle units
 
 import polars as pl
 from dataclasses import dataclass
-from pint import UnitRegistry
 import pint
 from fractions import Fraction
 
